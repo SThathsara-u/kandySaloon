@@ -47,7 +47,6 @@ const adminLinks = [
   { title: "Customers", href: "/admin/users", icon: Users },
   { title: "Inventory", href: "/admin/inventory", icon: Package },
   { title: "Employees", href: "/admin/employees", icon: User },
-  { title: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
 export function AdminHeader() {
@@ -70,7 +69,7 @@ export function AdminHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur items-center">
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur items-center pl-10 pr-10">
       <div className="container flex h-14 items-center justify-between">
         <div className="flex items-center gap-4">
           <Sheet>
@@ -150,17 +149,6 @@ export function AdminHeader() {
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                {notifications > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                  >
-                    {notifications}
-                  </Badge>
-                )}
-              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[320px]">
               <DropdownMenuLabel>Notifications</DropdownMenuLabel>
@@ -189,10 +177,6 @@ export function AdminHeader() {
               <DropdownMenuItem>
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-red-600" onClick={handleLogout}>

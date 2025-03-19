@@ -74,7 +74,7 @@ const managementCardsData = [
     lightColor: "bg-blue-100",
     count: `${analyticsData.customersToday} new today`,
     link: "/admin/users",
-    alert: analyticsData.pendingInquiries > 0 ? `${analyticsData.pendingInquiries} pending inquiries` : "",
+    alert: "",
   },
   {
     id: 2,
@@ -85,7 +85,7 @@ const managementCardsData = [
     lightColor: "bg-purple-100",
     count: `${analyticsData.inventoryItems} items`,
     link: "/admin/inventory",
-    alert: analyticsData.stockAlerts > 0 ? `${analyticsData.stockAlerts} stock alerts` : "",
+    alert: "",
   },
   {
     id: 3,
