@@ -67,30 +67,59 @@ export default function LoginPage() {
       try {
         // Check for admin credentials
         if (formState.email === "admin@gmail.com" && formState.password === "admin1234") {
-          // Store admin details in localStorage
-          const adminData = {
-            email: formState.email,
-            role: "admin",
-            isAuthenticated: true,
-            token: "admin-token" // You might want to generate a proper token
-          };
-          localStorage.setItem('adminData', JSON.stringify(adminData));
-          
-          setIsSubmitting(false);
-          setIsSuccess(true);
-          
-          toast({
-            title: "Success",
-            description: "Admin login successful!",
-            variant: "default",
-          });
-          
-          setTimeout(() => {
-            router.push('/admin');
-          }, 1500);
-          
-          return;
+            try {
+            // Call a special admin login API endpoint to set the cookie properly
+            const response = await fetch('/api/auth/admin-login', {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                email: formState.email,
+                password: formState.password,
+                isAdmin: true // Add this flag to indicate admin login
+                }),
+                credentials: 'include', // Important for cookies to be set
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Store admin details in localStorage
+                const adminData = {
+                email: formState.email,
+                role: "admin",
+                isAuthenticated: true,
+                token: "admin-token" 
+                };
+                localStorage.setItem('adminData', JSON.stringify(adminData));
+                
+                setIsSubmitting(false);
+                setIsSuccess(true);
+                
+                toast({
+                title: "Success",
+                description: "Admin login successful!",
+                variant: "default",
+                });
+                
+                setTimeout(() => {
+                router.push('/admin');
+                }, 1500);
+            } else {
+                throw new Error(data.message || "Login failed");
+            }
+            } catch (error) {
+            toast({
+                title: "Error",
+                description: error instanceof Error ? error.message : "Login failed",
+                variant: "destructive",
+            });
+            setIsSubmitting(false);
+            }
+            return;
         }
+  
 
         const response = await fetch('/api/auth/login', {
           method: 'POST',

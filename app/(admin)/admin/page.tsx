@@ -183,7 +183,7 @@ export default function AdminDashboard() {
       router.push('/login');
       return;
     }
-
+  
     try {
       const admin = JSON.parse(adminData);
       if (!admin.token || !admin.isAuthenticated) {
@@ -195,6 +195,7 @@ export default function AdminDashboard() {
       router.push('/login');
     }
   }, [router]);
+  
 
   // Animation variants
   const containerVariants = {

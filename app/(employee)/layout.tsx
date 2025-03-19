@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../globals.css";
 import { ThemeProvider } from "@/providers/ThemeProvider";
-import { AdminFooter } from "@/components/admin/AdminFooter";
-import { AdminHeader } from "@/components/admin/AdminHeader";
 import { AuthProvider } from '@/contexts/AuthContext';
 import { EmployeeAuthProvider } from '@/contexts/EmployeeAuthContext'
 
@@ -29,21 +27,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <AuthProvider>
+        <EmployeeAuthProvider>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider>
-          <AuthProvider>
-          <AdminHeader />
-          <EmployeeAuthProvider>
-            <main>
-                {children}
-            </main>
-            </EmployeeAuthProvider>
-          <AdminFooter />
-          </AuthProvider>
+            {children}
         </ThemeProvider>
       </body>
+      </EmployeeAuthProvider>
+      </AuthProvider>
     </html>
   );
 }

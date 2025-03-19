@@ -34,11 +34,25 @@ export async function GET(request: NextRequest) {
     const decoded = jwt.verify(
       token, 
       process.env.JWT_SECRET || 'fallback_secret'
-    ) as { id: string };
+    ) as { id: string, role?: string };
+    
+    // Special case for admin-id
+    if (decoded.id === 'admin-id') {
+      // Return hardcoded admin user data
+      return NextResponse.json({
+        success: true,
+        user: {
+          id: 'admin-id',
+          fullName: 'Administrator',
+          email: 'admin@gmail.com',
+          role: 'admin'
+        }
+      }, { status: 200 });
+    }
     
     await connectDB();
     
-    // Find user by id (from token)
+    // For regular users, find by id from token
     const user = await User.findById(decoded.id).select('-password');
     
     if (!user) {
