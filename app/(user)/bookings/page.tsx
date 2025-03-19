@@ -1,319 +1,436 @@
-  'use client'
+"use client"
 
-  import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-  import { Calendar } from "@/components/ui/calendar"
-  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-  import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-  import { Input } from "@/components/ui/input"
-  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-  import { zodResolver } from "@hookform/resolvers/zod"
-  import { CalendarCheck2, Info, Clock } from "lucide-react"
-  import { useForm } from "react-hook-form"
-  import * as z from "zod"
-  import { Button } from "@/components/ui/button"
-  import { useState } from "react"
-  import { toast } from "@/hooks/use-toast"
-  import { motion } from "framer-motion"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { motion } from "framer-motion"
+import { format } from "date-fns"
+import { Calendar } from "@/components/ui/calendar"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
+import { Textarea } from "@/components/ui/textarea"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useToast } from "@/hooks/use-toast"
+import { TimeSlotPicker } from "@/components/time-slot-picker"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { 
+  CalendarDays, 
+  Clock, 
+  Scissors, 
+  User, 
+  Phone, 
+  Mail, 
+  MessageSquare,
+  CheckCircle,
+  Sparkles
+} from "lucide-react"
 
-  const formSchema = z.object({
-    name: z.string().min(2, { message: "Please enter your full name (minimum 2 characters)" }),
-    email: z.string().email({ message: "Oops! That doesn't look like a valid email address" }),
-    phone: z.string().min(10, { message: "Phone number should be at least 10 digits" }).regex(/^[0-9+\-\s()]+$/, { message: "Please use only numbers, spaces, and these symbols: + - ( )" }),
-    service: z.string().min(1, { message: "Don't forget to choose a service! 💇‍♀️" }),
-    date: z.date({ required_error: "When would you like to visit us? 📅" }),
-    time: z.string().min(1, { message: "What time works best for you? ⏰" }),
+interface UserProfile {
+  id: string
+  fullName: string
+  email: string
+  phone: string
+}
+
+interface BookingFormData {
+  serviceType: string
+  date: Date | undefined
+  timeSlot: string
+  notes: string
+  alternatePhone: string
+}
+
+interface TimeSlot {
+  id: string
+  time: string
+  isBooked: boolean
+}
+
+const serviceTypes = [
+  { id: "haircut", name: "Haircut & Styling" },
+  { id: "coloring", name: "Hair Coloring" },
+  { id: "facial", name: "Facial Treatment" },
+  { id: "manicure", name: "Manicure & Pedicure" },
+  { id: "massage", name: "Relaxing Massage" },
+  { id: "makeup", name: "Professional Makeup" },
+]
+
+export default function BookingPage() {
+  const { toast } = useToast()
+  const router = useRouter()
+  const [user, setUser] = useState<UserProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<TimeSlot[]>([])
+  
+  const [bookingData, setBookingData] = useState<BookingFormData>({
+    serviceType: "haircut",
+    date: undefined,
+    timeSlot: "",
+    notes: "",
+    alternatePhone: "",
   })
 
-  export default function BookingPage() {
-    const [isSubmitting, setIsSubmitting] = useState(false)
-
-    const form = useForm<z.infer<typeof formSchema>>({
-      resolver: zodResolver(formSchema),
-      defaultValues: {
-        name: "",
-        email: "",
-        phone: "",
-        service: "",
-        time: "",
-      },
-    })
-
-    async function onSubmit(values: z.infer<typeof formSchema>) {
-      setIsSubmitting(true)
+  useEffect(() => {
+    const fetchUserProfile = async () => {
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        toast({
-          title: "Booking Successful!",
-          description: "You will receive a confirmation email shortly.",
-          duration: 5000,
-        })
-        form.reset()
+        const res = await fetch("/api/auth/me")
+        if (!res.ok) throw new Error("Failed to fetch profile")
+        
+        const userData = await res.json()
+        setUser(userData)
       } catch (error) {
+        console.error("Error fetching user profile:", error)
         toast({
-          title: "Error",
-          description: "Something went wrong. Please try again.",
+          title: "Authentication Error",
+          description: "Please login to book an appointment",
           variant: "destructive",
         })
+        router.push("/login")
       } finally {
-        setIsSubmitting(false)
+        setLoading(false)
       }
     }
 
-    const timeSlots = Array.from({ length: 22 }, (_, i) => {
-      const hour = Math.floor(i / 2) + 9
-      const minute = i % 2 === 0 ? "00" : "30"
-      return `${hour.toString().padStart(2, "0")}:${minute}`
-    })
+    fetchUserProfile()
+  }, [router, toast])
 
+  // Fetch available time slots when date changes
+  useEffect(() => {
+    const fetchTimeSlots = async () => {
+      if (!bookingData.date) return
+      
+      try {
+        const dateStr = format(bookingData.date, "yyyy-MM-dd")
+        const res = await fetch(`/api/bookings/time-slots?date=${dateStr}&service=${bookingData.serviceType}`)
+        
+        if (!res.ok) throw new Error("Failed to fetch time slots")
+        
+        const data = await res.json()
+        setAvailableTimeSlots(data.timeSlots)
+      } catch (error) {
+        console.error("Error fetching time slots:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load available time slots",
+          variant: "destructive",
+        })
+      }
+    }
+
+    if (bookingData.date) {
+      fetchTimeSlots()
+    }
+  }, [bookingData.date, bookingData.serviceType, toast])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!bookingData.date || !bookingData.timeSlot) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a date and time slot for your appointment",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    setSubmitting(true)
+    
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...bookingData,
+          date: format(bookingData.date, "yyyy-MM-dd"),
+        }),
+      })
+      
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to book appointment")
+      }
+      
+      toast({
+        title: "Booking Confirmed!",
+        description: `Your appointment has been scheduled for ${format(bookingData.date, "EEEE, MMMM d")} at ${bookingData.timeSlot}`,
+        variant: "default",
+      })
+      
+      // Reset form
+      setBookingData({
+        serviceType: "haircut",
+        date: undefined,
+        timeSlot: "",
+        notes: "",
+        alternatePhone: "",
+      })
+      const bookingId = data.booking._id
+
+      // Redirect to bookings list after short delay
+      setTimeout(() => {
+        router.push(`/bookings/success?id=${bookingId}`)
+      }, 2000)
+      
+    } catch (error) {
+      console.error("Error booking appointment:", error)
+      if (error instanceof Error) {
+        toast({
+          title: "Booking Failed",
+          description: error.message,
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (loading) {
     return (
-      <div className="container mx-auto py-10 mt-10 space-y-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Alert className="bg-blue-200 text-black border-primary w-full md:w-5/6 mx-auto shadow-lg">
-            <Info className="h-5 w-5" />
-            <AlertTitle className="text-lg font-semibold">Booking Information</AlertTitle>
-            <AlertDescription className="mt-2">
-              Welcome to our salon booking system. Please read the following guidelines before making an appointment:
-              <ul className="list-disc ml-6 mt-2 space-y-1">
-                <li>Appointments must be made at least 24 hours in advance</li>
-                <li>Please arrive 10 minutes before your scheduled time</li>
-                <li>Cancellations must be made 12 hours before the appointment</li>
-                <li>A confirmation email will be sent after booking</li>
-              </ul>
-            </AlertDescription>
-          </Alert>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <Card className="w-full md:w-5/6 mx-auto shadow-lg">
-            <CardHeader>
-              <CardTitle>Important Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
-                  <p className="text-sm text-muted-foreground">
-                    🕒 Our working hours are from 9:00 AM to 8:00 PM, Monday through Saturday.
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
-                  <p className="text-sm text-muted-foreground">
-                    💫 For special occasions or group bookings, please contact us directly.
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
-                  <p className="text-sm text-muted-foreground">
-                    ⚡ Emergency appointments may be available - please call us directly.
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
-                  <p className="text-sm text-muted-foreground">
-                    🎁 First-time customers receive a 10% discount on their service.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <Card className="w-full md:w-5/6 mx-auto shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarCheck2 className="h-6 w-6" />
-                Book Your Appointment
-              </CardTitle>
-              <CardDescription>
-                Fill in your details below to schedule your salon service
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-1">
-                            Full Name
-                            <span className="text-red-500">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="John Doe" 
-                              {...field} 
-                              className="transition-all duration-200 focus:scale-[1.02]"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm mt-1 animate-slideDown" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-1">
-                            Email
-                            <span className="text-red-500">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="john@example.com" 
-                              {...field} 
-                              className="transition-all duration-200 focus:scale-[1.02]"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm mt-1 animate-slideDown" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-1">
-                            Phone Number
-                            <span className="text-red-500">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="+1 (555) 000-0000" 
-                              {...field} 
-                              className="transition-all duration-200 focus:scale-[1.02]"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-sm mt-1 animate-slideDown" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="service"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-1">
-                            Service
-                            <span className="text-red-500">*</span>
-                          </FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
-                                <SelectValue placeholder="Select a service" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="haircut">✂️ Haircut</SelectItem>
-                              <SelectItem value="coloring">🎨 Hair Coloring</SelectItem>
-                              <SelectItem value="styling">💇 Hair Styling</SelectItem>
-                              <SelectItem value="treatment">💆 Hair Treatment</SelectItem>
-                              <SelectItem value="makeup">💄 Makeup</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage className="text-red-500 text-sm mt-1 animate-slideDown" />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="date"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel className="flex items-center gap-1">
-                            Appointment Date
-                            <span className="text-red-500">*</span>
-                          </FormLabel>
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            className="rounded-md border shadow-sm"
-                            disabled={(date) => {
-                              const today = new Date()
-                              today.setHours(0, 0, 0, 0)
-                              return date < today || date.getDay() === 0
-                            }}
-                          />
-                          <FormMessage className="text-red-500 text-sm mt-1 animate-slideDown" />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="time"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-1">
-                            Appointment Time
-                            <span className="text-red-500">*</span>
-                          </FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
-                                <SelectValue placeholder="Select a time" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {timeSlots.map((time) => (
-                                <SelectItem key={time} value={time}>
-                                  <span className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4" />
-                                    {time}
-                                  </span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            Available time slots between 9:00 AM and 8:00 PM
-                          </FormDescription>
-                          <FormMessage className="text-red-500 text-sm mt-1 animate-slideDown" />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    className="w-full md:w-auto transition-all duration-200 hover:scale-105"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <span className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        Processing...
-                      </span>
-                    ) : (
-                      "Book Appointment"
-                    )}
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        </motion.div>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin h-12 w-12 border-t-2 border-b-2 border-primary rounded-full"></div>
       </div>
     )
   }
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="container mx-auto px-4 py-8 mt-14"
+    >
+      <motion.h1 
+        className="text-3xl md:text-4xl font-bold text-center mb-2"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        Book Your Appointment
+      </motion.h1>
+      <motion.p 
+        className="text-center text-muted-foreground mb-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        Schedule your perfect salon experience at Kandy Saloon
+      </motion.p>
+
+      <form onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Scissors className="h-5 w-5 mr-2" />
+                  <span>Select Service & Date</span>
+                </CardTitle>
+                <CardDescription>Choose the service you'd like to book</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="service-type">Service Type</Label>
+                  <Select
+                    value={bookingData.serviceType}
+                    onValueChange={(value) => setBookingData({...bookingData, serviceType: value})}
+                  >
+                    <SelectTrigger id="service-type">
+                      <SelectValue placeholder="Select service" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {serviceTypes.map((service) => (
+                        <SelectItem key={service.id} value={service.id}>
+                          {service.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Appointment Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {bookingData.date ? (
+                          format(bookingData.date, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={bookingData.date}
+                        onSelect={(date) => setBookingData({...bookingData, date})}
+                        disabled={(date) => {
+                          // Create a date 3 days from now
+                          const today = new Date();
+                          const threeDaysFromNow = new Date(today);
+                          threeDaysFromNow.setDate(today.getDate() + 3);
+                          
+                          // Set both dates to midnight for accurate comparison
+                          threeDaysFromNow.setHours(0, 0, 0, 0);
+                          
+                          // Disable dates before 3 days from now or more than 2 months in the future
+                          return (
+                          date < threeDaysFromNow || 
+                          date > new Date(new Date().setMonth(new Date().getMonth() + 2))
+                          );
+                      }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {bookingData.date && (
+                  <motion.div 
+                    className="space-y-2"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Label className="flex items-center">
+                      <Clock className="h-4 w-4 mr-2" />
+                      Available Time Slots
+                    </Label>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {availableTimeSlots.length > 0 ? (
+                        availableTimeSlots.map((slot) => (
+                          <Button
+                            key={slot.id}
+                            type="button"
+                            variant={bookingData.timeSlot === slot.time ? "default" : "outline"}
+                            className={`${slot.isBooked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={slot.isBooked}
+                            onClick={() => setBookingData({...bookingData, timeSlot: slot.time})}
+                          >
+                            {slot.time}
+                          </Button>
+                        ))
+                      ) : (
+                        <p className="col-span-4 text-center text-muted-foreground py-2">
+                          No available slots for this date
+                        </p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <MessageSquare className="h-5 w-5 mr-2" />
+                  <span>Additional Information</span>
+                </CardTitle>
+                <CardDescription>Please provide any additional details for your appointment</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="alternate-phone">Alternative Contact Number</Label>
+                  <Input
+                    id="alternate-phone"
+                    placeholder="Enter alternative phone number"
+                    value={bookingData.alternatePhone}
+                    onChange={(e) => setBookingData({...bookingData, alternatePhone: e.target.value})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Special Requests or Notes</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Any special requests or details we should know about..."
+                    rows={4}
+                    value={bookingData.notes}
+                    onChange={(e) => setBookingData({...bookingData, notes: e.target.value})}
+                  />
+                </div>
+              </CardContent>
+
+              <CardFooter className="flex flex-col space-y-4">
+                <Button 
+                  type="submit" 
+                  className="w-full group" 
+                  disabled={submitting || !bookingData.date || !bookingData.timeSlot}
+                >
+                  {submitting ? (
+                    <>Processing...</>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
+                      Confirm Booking
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  By confirming, you agree to our booking terms and cancellation policy
+                </p>
+              </CardFooter>
+            </Card>
+          </motion.div>
+        </div>
+      </form>
+
+      <motion.div
+        className="mt-12 text-center"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+      >
+        <h3 className="text-xl font-medium flex items-center justify-center mb-4">
+          <Sparkles className="h-5 w-5 mr-2 text-primary" />
+          <span>Why Choose Kandy Saloon?</span>
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <Card className="bg-primary/5 border-none">
+            <CardContent className="pt-6">
+              <h4 className="font-medium mb-2">Experienced Stylists</h4>
+              <p className="text-sm text-muted-foreground">Our team of professionals are trained to provide top-quality services</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-primary/5 border-none">
+            <CardContent className="pt-6">
+              <h4 className="font-medium mb-2">Premium Products</h4>
+              <p className="text-sm text-muted-foreground">We use only high-quality, industry-leading products for all services</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-primary/5 border-none">
+            <CardContent className="pt-6">
+              <h4 className="font-medium mb-2">Comfortable Environment</h4>
+              <p className="text-sm text-muted-foreground">Relax in our modern, clean, and welcoming salon space</p>
+            </CardContent>
+          </Card>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}

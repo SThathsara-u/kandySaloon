@@ -1,139 +1,208 @@
-'use client'
-import { useState } from 'react'
-import Link from 'next/link'
-import { Bell, Settings, LogOut, Menu, X, Search } from 'lucide-react'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from '@radix-ui/react-dropdown-menu'
-import { ThemeSwitch } from '../ThemeSwitch'
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import {
+  Bell,
+  Search,
+  Menu,
+  X,
+  User,
+  Package,
+  Calendar,
+  Users,
+  Settings,
+  LogOut,
+  BarChart2,
+  MessageSquare,
+  ShoppingBag
+} from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger,
+  DropdownMenuGroup
+} from "@/components/ui/dropdown-menu";
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetTrigger 
+} from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ThemeSwitch } from '../ThemeSwitch';
+import { useRouter } from "next/navigation";
+
+const adminLinks = [
+  { title: "Dashboard", href: "/admin", icon: BarChart2 },
+  { title: "Appointments", href: "/admin/appointments", icon: Calendar },
+  { title: "Customers", href: "/admin/users", icon: Users },
+  { title: "Inventory", href: "/admin/inventory", icon: Package },
+  { title: "Employees", href: "/admin/employees", icon: User },
+  { title: "Settings", href: "/admin/settings", icon: Settings },
+];
 
 export function AdminHeader() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [notifications] = useState(5)
+  const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
+  const [notifications] = useState(5);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [activeLink, setActiveLink] = useState('/admin');
+  
+  useEffect(() => {
+    setIsMounted(true);
+    if (typeof window !== 'undefined') {
+      setActiveLink(window.location.pathname);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminData');
+    router.push('/login');
+  };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-card/95 border-b border-border backdrop-blur-lg">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo & Brand */}
-          <div className="flex items-center gap-2">
-            <Link href="/admin" className="text-xl font-bold transition-colors hover:text-primary">
-              <span className="text-primary">LUMINEX</span>
-              <span className="hidden sm:inline"> Admin</span>
-            </Link>
-          </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-4">
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input 
-                type="text"
-                placeholder="Search..."
-                className="pl-10 pr-4 py-2 rounded-full bg-background border border-primary w-64 focus:outline-none focus:ring-2 focus:ring-primary focus:w-96 transition-all duration-300"
-              />
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur items-center">
+      <div className="container flex h-14 items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[200px] ">
+              <SheetHeader>
+                <SheetTitle>
+                  <Link href="/admin" className="flex items-center">
+                    <span className="text-xl font-bold">Kandy Saloon</span>
+                  </Link>
+                </SheetTitle>
+              </SheetHeader>
+              <nav className="flex flex-col gap-1 mt-4">
+                {adminLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground ${
+                      activeLink === link.href ? "bg-accent text-accent-foreground" : ""
+                    }`}
+                  >
+                    <link.icon className="mr-2 h-4 w-4" />
+                    {link.title}
+                  </Link>
+                ))}
+              </nav>
+            </SheetContent>
+          </Sheet>
+          
+          <Link href="/admin" className="hidden md:flex items-center gap-2">
+            <div className="bg-purple-600 rounded-md p-1.5">
+              <ShoppingBag className="h-5 w-5 text-white" />
             </div>
-
-            {/* Notifications */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="relative p-2 rounded-full hover:bg-background/80 transition-colors">
-                  <Bell className="w-5 h-5" />
-                  {notifications > 0 && (
-                    <span className="absolute top-0 right-0 w-4 h-4 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center animate-pulse">
-                      {notifications}
-                    </span>
-                  )}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-80 bg-card border border-border p-4 rounded-xl mt-2 shadow-lg">
-                <DropdownMenuLabel>Recent Notifications</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {/* Add notification items here */}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Settings */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="p-2 rounded-full hover:bg-background/80 transition-colors">
-                  <Settings className="w-5 h-5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-card border border-border p-4 rounded-xl mt-2 shadow-lg">
-                <DropdownMenuLabel>Admin Settings</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer hover:bg-background/80 rounded-lg transition-colors">Profile</DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer hover:bg-background/80 rounded-lg transition-colors">Preferences</DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer hover:bg-background/80 rounded-lg transition-colors">Security</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Theme Switch */}
-            <ThemeSwitch />
-
-            {/* User Profile */}
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors">
-                <span className="text-primary font-semibold">AS</span>
-              </div>
-              <button className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:opacity-90 transition-all hover:scale-105 flex items-center gap-2">
-                <LogOut className="w-4 h-4" />
-                <span>Logout</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="flex items-center gap-2 md:hidden">
-            <ThemeSwitch />
-            <button 
-              className="p-2 hover:bg-background/80 rounded-lg transition-colors"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
+            <span className="text-lg font-bold">
+              Kandy<span className="text-purple-600">Saloon</span>
+            </span>
+          </Link>
         </div>
-
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden py-4 space-y-4 animate-slideDown">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input 
-                type="text"
-                placeholder="Search..."
-                className="w-full pl-10 pr-4 py-2 rounded-full bg-background/50 border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-              />
-            </div>
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between bg-background/50 p-3 rounded-xl">
-                <div className="flex items-center gap-4">
-                  <button className="relative p-2 hover:bg-background/80 rounded-lg transition-colors">
-                    <Bell className="w-5 h-5" />
-                    {notifications > 0 && (
-                      <span className="absolute top-0 right-0 w-4 h-4 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center animate-pulse">
-                        {notifications}
-                      </span>
-                    )}
-                  </button>
-                  <button className="p-2 hover:bg-background/80 rounded-lg transition-colors">
-                    <Settings className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-primary font-semibold">AS</span>
-                  </div>
-                  <button className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:opacity-90 transition-all hover:scale-105 flex items-center gap-2">
-                    <LogOut className="w-4 h-4" />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+        
+        <nav className="hidden md:flex items-center gap-1">
+          {adminLinks.map((link) => (
+            <Link 
+              key={link.href} 
+              href={link.href}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground ${
+                activeLink === link.href ? "bg-accent text-accent-foreground" : ""
+              }`}
+            >
+              <span className="flex items-center">
+                <link.icon className="h-4 w-4 mr-1.5" /> 
+                {link.title}
+              </span>
+            </Link>
+          ))}
+        </nav>
+        
+        <div className="flex items-center gap-2">
+          <div className="relative flex items-center">
+            <Input
+              type="text"
+              placeholder="Search..."
+              className="w-[200px] h-9"
+            />
+            <Button 
+              size="icon" 
+              variant="ghost"
+              className="absolute right-0"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
           </div>
-        )}
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                {notifications > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                  >
+                    {notifications}
+                  </Badge>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[320px]">
+              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="flex items-center gap-2">
+                <span className="font-medium">New Appointment Booked</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="flex items-center gap-2">
+                <span className="font-medium">New Customer Inquiry</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <ThemeSwitch />
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 rounded-full">
+                <Avatar>
+                  <AvatarImage src="/avatars/admin.jpg" alt="Admin" />
+                  <AvatarFallback>AD</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-red-600" onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
-  )
+  );
 }

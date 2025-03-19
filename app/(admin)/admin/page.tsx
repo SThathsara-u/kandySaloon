@@ -1,271 +1,394 @@
-'use client'
-import { useState } from 'react'
-import Link from 'next/link'
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import Link from "next/link";
 import {
   Users,
-  Package,
+  ShoppingBag,
+  Calendar,
+  User,
+  DollarSign,
   BarChart3,
+  Menu,
+  Bell,
+  Search,
   MessageSquare,
-  ShoppingCart,
-  Sun,
-  FileText,
+  PackageOpen,
+  Truck,
+  Clock,
   TrendingUp,
-  AlertCircle,
-  UserCog, 
-  PenTool, 
-  FileSpreadsheet, 
-  Megaphone,
+  UserCircle,
   LogOut,
-  Coins,
-  Bell
-} from 'lucide-react'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from '@radix-ui/react-dropdown-menu'
+  Settings,
+  ChevronRight,
+  Scissors
+} from "lucide-react";
+import Image from "next/image";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { useRouter } from "next/navigation";
 
-interface DashboardCard {
-  title: string
-  value: string
-  change: number
-  icon: React.ReactNode
-  color: string
-}
+// Dashboard analytics data
+const analyticsData = {
+  totalAppointments: 42,
+  totalRevenue: 8754.32,
+  customersToday: 16,
+  pendingInquiries: 8,
+  inventoryItems: 137,
+  employeesActive: 12,
+  revenueGrowth: 12.8,
+  appointmentGrowth: 8.3,
+  customerGrowth: 15.6,
+  stockAlerts: 5
+};
 
-interface AdminFeatureCard {
-  title: string
-  description: string
-  icon: React.ReactNode
-  link: string
-  color: string
-  details: {
-    stats: string
-    usage: string
-    lastUpdated: string
-    features: string[]
-  }
-}
+// Dashboard management cards data
+const managementCardsData = [
+  {
+    id: 1,
+    title: "Users & Inquiries",
+    description: "Manage customers and inquiries",
+    icon: Users,
+    color: "bg-blue-500",
+    lightColor: "bg-blue-100",
+    count: `${analyticsData.customersToday} new today`,
+    link: "/admin/users",
+    alert: analyticsData.pendingInquiries > 0 ? `${analyticsData.pendingInquiries} pending inquiries` : "",
+  },
+  {
+    id: 2,
+    title: "Inventory & Suppliers",
+    description: "Track products and manage suppliers",
+    icon: PackageOpen,
+    color: "bg-purple-500",
+    lightColor: "bg-purple-100",
+    count: `${analyticsData.inventoryItems} items`,
+    link: "/admin/inventory",
+    alert: analyticsData.stockAlerts > 0 ? `${analyticsData.stockAlerts} stock alerts` : "",
+  },
+  {
+    id: 3,
+    title: "Appointments",
+    description: "Schedule and track services",
+    icon: Calendar,
+    color: "bg-pink-500",
+    lightColor: "bg-pink-100",
+    count: `${analyticsData.totalAppointments} upcoming`,
+    link: "/admin/appointments",
+    alert: "",
+  },
+  {
+    id: 4,
+    title: "Employee Management",
+    description: "Manage staff and schedules",
+    icon: User,
+    color: "bg-amber-500",
+    lightColor: "bg-amber-100",
+    count: `${analyticsData.employeesActive} active staff`,
+    link: "/admin/employees",
+    alert: "",
+  },
+];
+
+// Recent activities data
+const recentActivities = [
+  {
+    id: 1,
+    action: "New appointment booked",
+    user: "Emma Thompson",
+    time: "10 minutes ago",
+    avatar: "/avatars/emma.jpg",
+    service: "Hair Coloring + Styling",
+  },
+  {
+    id: 2,
+    action: "New customer inquiry",
+    user: "Michael Rodriguez",
+    time: "45 minutes ago",
+    avatar: "/avatars/michael.jpg",
+    service: "About wedding packages",
+  },
+  {
+    id: 3,
+    action: "Inventory updated",
+    user: "Sarah Chen (Staff)",
+    time: "2 hours ago",
+    avatar: "/avatars/sarah.jpg",
+    service: "Added 24 new items",
+  },
+  {
+    id: 4,
+    action: "Appointment completed",
+    user: "James Wilson",
+    time: "3 hours ago",
+    avatar: "/avatars/james.jpg",
+    service: "Men's Haircut + Beard Trim",
+  },
+];
 
 export default function AdminDashboard() {
-  const [notifications] = useState(5)
-  const [hoveredCard, setHoveredCard] = useState<number | null>(null)
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [progress, setProgress] = useState(13);
+  const router = useRouter();
 
-  const dashboardStats: DashboardCard[] = [
-    {
-      title: "Total Revenue",
-      value: "$124,563",
-      change: 12.5,
-      icon: <TrendingUp />,
-      color: "bg-green-500"
-    },
-    {
-      title: "Active Orders",
-      value: "45",
-      change: 8.2,
-      icon: <ShoppingCart />,
-      color: "bg-blue-500"
-    },
-    {
-      title: "Total Customers",
-      value: "1,240",
-      change: 15.8,
-      icon: <Users />,
-      color: "bg-purple-500"
-    },
-    {
-      title: "Pending Installations",
-      value: "28",
-      change: -4.3,
-      icon: <Sun />,
-      color: "bg-orange-500"
-    },
-  ]
+  useEffect(() => {
+    // Check if we're on mobile
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+      if (window.innerWidth < 1024) {
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
+    };
+    
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    
+    // Animation for progress bar
+    const timer = setTimeout(() => setProgress(87), 500);
+    
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+      clearTimeout(timer);
+    };
+  }, []);
 
-  const adminFeatures: AdminFeatureCard[] = [
-    {
-      title: "Projects Management",
-      description: "Manage projects",
-      icon: <Package className='animate-bounce' />,
-      link: "/admin/projects",
-      color: "bg-blue-500",
-      details: {
-        stats: "156 Active Projects",
-        usage: "85% Completion Rate",
-        lastUpdated: "2 hours ago",
-        features: ["Project Timeline", "Resource Allocation", "Budget Tracking", "Team Management"]
+  useEffect(() => {
+    // Check admin authentication
+    const adminData = localStorage.getItem('adminData');
+    if (!adminData) {
+      router.push('/login');
+      return;
+    }
+
+    try {
+      const admin = JSON.parse(adminData);
+      if (!admin.token || !admin.isAuthenticated) {
+        localStorage.removeItem('adminData');
+        router.push('/login');
       }
-    },
-    {
-      title: "Finance Management",
-      description: "View and manage financial information",
-      icon: <Coins className='animate-bounce' />,
-      link: "/admin/finance",
-      color: "bg-green-500",
-      details: {
-        stats: "$2.4M Monthly Revenue",
-        usage: "92% Payment Success",
-        lastUpdated: "5 mins ago",
-        features: ["Invoice Generation", "Expense Tracking", "Financial Reports", "Budget Planning"]
-      }
-    },
-    {
-      title: "Employee Management",
-      description: "Manage employees salary and performance",
-      icon: <UserCog className='animate-bounce' />,
-      link: "/admin/employee",
-      color: "bg-cyan-500",
-      details: {
-        stats: "245 Active Employees",
-        usage: "78% Performance Rate",
-        lastUpdated: "1 hour ago",
-        features: ["Payroll Management", "Performance Reviews", "Leave Management", "Training Tracking"]
-      }
-    },
-    {
-      title: "Customer Database",
-      description: "Store and manage customer information",
-      icon: <FileText className='animate-bounce' />,
-      link: "/admin/reports",
-      color: "bg-yellow-500",
-      details: {
-        stats: "5,678 Customers",
-        usage: "95% Data Accuracy",
-        lastUpdated: "30 mins ago",
-        features: ["Customer Profiles", "Interaction History", "Data Analytics", "Segmentation"]
-      }
-    },
-    {
-      title: "Notifications",
-      description: "View and manage notifications",
-      icon: <Bell className='animate-bounce'/>,
-      link: "/admin/analytics",
-      color: "bg-red-500",
-      details: {
-        stats: "126 New Alerts",
-        usage: "98% Delivery Rate",
-        lastUpdated: "1 min ago",
-        features: ["Alert Management", "Custom Triggers", "Notification History", "Priority Settings"]
-      }
-    },
-    {
-      title: "Maintenance Tracking",
-      description: "Monitor and schedule system maintenance",
-      icon: <PenTool className='animate-bounce' />,
-      link: "/admin/maintenance",
-      color: "bg-emerald-500",
-      details: {
-        stats: "45 Scheduled Tasks",
-        usage: "89% On-time Completion",
-        lastUpdated: "15 mins ago",
-        features: ["Schedule Planning", "Task Assignment", "Progress Tracking", "Maintenance Logs"]
-      }
-    },
-    {
-      title: "Quote Generator",
-      description: "Create and manage customer quotes",
-      icon: <FileSpreadsheet className='animate-bounce' />,
-      link: "/admin/quotes",
-      color: "bg-violet-500",
-      details: {
-        stats: "234 Quotes Generated",
-        usage: "76% Conversion Rate",
-        lastUpdated: "45 mins ago",
-        features: ["Quote Templates", "Price Calculator", "Proposal Builder", "Quote History"]
-      }
-    },
-    {
-      title: "Support Tickets",
-      description: "Manage customer support requests",
-      icon: <MessageSquare className='animate-bounce' />,
-      link: "/admin/support",
-      color: "bg-pink-500",
-      details: {
-        stats: "89 Open Tickets",
-        usage: "94% Resolution Rate",
-        lastUpdated: "10 mins ago",
-        features: ["Ticket Management", "Response Templates", "Priority Queue", "Performance Metrics"]
+    } catch (error) {
+      localStorage.removeItem('adminData');
+      router.push('/login');
+    }
+  }, [router]);
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2
       }
     }
-  ]
-
-  const handleLogout = () => {
-    alert('Logout clicked')
-    window.location.href = '/login'
-  }
+  };
   
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {dashboardStats.map((stat, index) => (
-            <div key={index} className="bg-card p-6 rounded-xl border border-border">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`${stat.color} p-3 rounded-lg text-white`}>
-                  {stat.icon}
-                </div>
-                <span className={`text-sm ${stat.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {stat.change >= 0 ? '+' : ''}{stat.change}%
-                </span>
-              </div>
-              <h3 className="text-2xl font-bold mb-1">{stat.value}</h3>
-              <p className="text-muted-foreground">{stat.title}</p>
-            </div>
-          ))}
-        </div>
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 100 }
+    }
+  };
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {adminFeatures.map((feature, index) => (
-            <div key={index} className="relative" onMouseEnter={() => setHoveredCard(index)} onMouseLeave={() => setHoveredCard(null)}>
-              <Link 
-                href={feature.link}
-                className="group bg-card p-6 rounded-xl h-full border border-border hover:border-primary transition-all duration-300 block"
-              >
-                <div className={`${feature.color} w-12 h-12 rounded-lg flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}>
-                  {feature.icon}
-                </div>
-                <h3 className="font-semibold mb-2">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground">{feature.description}</p>
-              </Link>
-              {hoveredCard === index && (
-                <div className="absolute z-10 top-full left-0 right-0 mt-2 p-4 bg-card rounded-xl shadow-xl border border-border transform transition-all duration-300 ease-in-out opacity-100 scale-100 origin-top">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-primary">{feature.details.stats}</span>
-                      <span className="text-sm text-muted-foreground">Updated: {feature.details.lastUpdated}</span>
+  const cardVariants = {
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: { type: "spring", stiffness: 100 }
+    },
+    hover: {
+      scale: 1.03,
+      boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
+      transition: { type: "spring", stiffness: 400, damping: 10 }
+    }
+  };
+
+  return (
+    <div className="flex h-screen bg-background">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Main Content Scrollable Area */}
+        <main className="flex-1 overflow-y-auto bg-background p-4 sm:p-6 lg:p-8">
+          {/* Page Heading */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold ">Dashboard Overview</h1>
+            <p className="mt-1 ">Welcome back! Here's what's happening with your salon today.</p>
+          </div>
+          {/* Stats Grid */}
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+          >
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium ">Total Revenue</p>
+                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">${analyticsData.totalRevenue.toLocaleString()}</h3>
+                      <div className="flex items-center mt-1 text-sm">
+                        <span className="text-green-500 flex items-center">
+                          <TrendingUp className="h-3 w-3 mr-1" />
+                          {analyticsData.revenueGrowth}%
+                        </span>
+                        <span className=" ml-1">vs last month</span>
+                      </div>
                     </div>
-                    <div className="h-2 bg-gray-200 rounded-full">
-                      <div className={`h-full rounded-full ${feature.color}`} style={{width: feature.details.usage.split('%')[0] + '%'}}></div>
-                    </div>
-                    <p className="text-sm font-medium">{feature.details.usage}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {feature.details.features.map((feat, i) => (
-                        <div key={i} className="flex items-center gap-2 text-sm">
-                          <span className={`w-2 h-2 rounded-full ${feature.color}`}></span>
-                          {feat}
-                        </div>
-                      ))}
+                    <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <DollarSign className="h-6 w-6 text-green-600" />
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8 bg-card rounded-xl border border-border p-6">
-          <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
-          <div className="space-y-4">
-            {[1, 2, 3].map((_, index) => (
-              <div key={index} className="flex items-center gap-4 p-3 rounded-lg hover:bg-background">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <AlertCircle className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">New order received</p>
-                  <p className="text-sm text-muted-foreground">2 minutes ago</p>
-                </div>
-              </div>
-            ))}
+                </CardContent>
+              </Card>
+            </motion.div>
+            
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium ">Appointments</p>
+                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{analyticsData.totalAppointments}</h3>
+                      <div className="flex items-center mt-1 text-sm">
+                        <span className="text-green-500 flex items-center">
+                          <TrendingUp className="h-3 w-3 mr-1" />
+                          {analyticsData.appointmentGrowth}%
+                        </span>
+                        <span className=" ml-1">vs last week</span>
+                      </div>
+                    </div>
+                    <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Calendar className="h-6 w-6 text-blue-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+            
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium ">Customers Today</p>
+                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{analyticsData.customersToday}</h3>
+                      <div className="flex items-center mt-1 text-sm">
+                        <span className="text-green-500 flex items-center">
+                          <TrendingUp className="h-3 w-3 mr-1" />
+                          {analyticsData.customerGrowth}%
+                        </span>
+                        <span className=" ml-1">new customers</span>
+                      </div>
+                    </div>
+                    <div className="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center">
+                      <Users className="h-6 w-6 text-purple-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+            
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium ">Active Employees</p>
+                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{analyticsData.employeesActive}</h3>
+                      <div className="flex items-center mt-1 text-sm">
+                        <span className="">
+                          <Clock className="h-3 w-3 mr-1 inline" />
+                          Updated 15 min ago
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-12 w-12 bg-amber-100 rounded-full flex items-center justify-center">
+                      <User className="h-6 w-6 text-amber-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
+          
+          {/* Main Management Cards */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold  mb-6">Quick Management</h2>
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {managementCardsData.map((card) => (
+                <motion.div
+                  key={card.id}
+                  variants={cardVariants}
+                  whileHover="hover"
+                >
+                  <Link href={card.link} className="block h-full">
+                    <Card className="h-full">
+                      <CardContent className="p-6">
+                        <div className={`${card.lightColor} w-12 h-12 rounded-full flex items-center justify-center mb-4`}>
+                          <card.icon className={`h-6 w-6 ${card.color} text-white rounded-full p-1`} />
+                        </div>
+                        <CardTitle className="text-lg font-semibold mb-1">{card.title}</CardTitle>
+                        <CardDescription className="mb-4">{card.description}</CardDescription>
+                        
+                        <div className="mt-auto">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{card.count}</div>
+                          {card.alert && (
+                            <div className="mt-2">
+                              <Badge variant="destructive" className="text-xs">
+                                {card.alert}
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                      <CardFooter className="pt-0 pb-3 px-6">
+                        <div className="flex items-center text-sm text-purple-600 font-medium">
+                          Manage
+                          <ChevronRight className="ml-1 h-4 w-4" />
+                        </div>
+                      </CardFooter>
+                    </Card>
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.div>
           </div>
-        </div>
+        </main>
       </div>
     </div>
-  )
+  );
 }

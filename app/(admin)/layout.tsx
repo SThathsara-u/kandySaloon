@@ -4,6 +4,7 @@ import "../globals.css";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { AdminFooter } from "@/components/admin/AdminFooter";
 import { AdminHeader } from "@/components/admin/AdminHeader";
+import { AuthProvider } from '@/contexts/AuthContext';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,11 +32,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider>
-          <main className="pt-16">
-            <AdminHeader />
-              {children}
-            <AdminFooter />
-          </main>
+          <AuthProvider>
+          <AdminHeader />
+            <main>
+                {children}
+            </main>
+          <AdminFooter />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
