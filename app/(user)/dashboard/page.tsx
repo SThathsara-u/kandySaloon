@@ -301,25 +301,7 @@ export default function DashboardPage() {
                 title="My Messages" 
                 description="View responses to your inquiries"
                 icon={<MessageSquare size={18} />}
-                href="/messages"
-              />
-              <DashboardCard 
-                title="Favorite Services" 
-                description="Your saved and frequently used services"
-                icon={<Heart size={18} />}
-                href="/services/favorites"
-              />
-              <DashboardCard 
-                title="Service History" 
-                description="Review your past appointments and services"
-                icon={<Clock size={18} />}
-                href="/bookings/history"
-              />
-              <DashboardCard 
-                title="Account Settings" 
-                description="Manage your profile and preferences"
-                icon={<Settings size={18} />}
-                href="/settings"
+                href="/dashboard/messages"
               />
             </div>
           </TabsContent>

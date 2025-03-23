@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Create Next App",
-  description: "Saloon for everyone",
+  title: "Kandy Saloon",
+  description: "Your trusted saloon service",
 };
 
 export default function RootLayout({
@@ -27,10 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+
         <ThemeProvider>
           <AuthProvider>
           <main>
@@ -40,7 +37,6 @@ export default function RootLayout({
           </main>
           </AuthProvider>
         </ThemeProvider>
-      </body>
-    </html>
+
   );
 }

@@ -73,7 +73,7 @@ const managementCardsData = [
     color: "bg-blue-500",
     lightColor: "bg-blue-100",
     count: `${analyticsData.customersToday} new today`,
-    link: "/admin/users",
+    link: "/admin/messages",
     alert: "",
   },
   {

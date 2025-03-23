@@ -44,7 +44,7 @@ import { useRouter } from "next/navigation";
 const adminLinks = [
   { title: "Dashboard", href: "/admin", icon: BarChart2 },
   { title: "Appointments", href: "/admin/appointments", icon: Calendar },
-  { title: "Customers", href: "/admin/users", icon: Users },
+  { title: "Inquiries", href: "/admin/messages", icon: Users },
   { title: "Inventory", href: "/admin/inventory", icon: Package },
   { title: "Employees", href: "/admin/employees", icon: User },
 ];
