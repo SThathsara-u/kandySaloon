@@ -137,8 +137,8 @@ export default function SaloonHomePage() {
                 Experience premium hair care and styling in a luxurious environment. Our expert stylists are dedicated to bringing your vision to life.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                <Link href="/services" className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full text-white bg-primary hover:bg-black transition-colors">
-                  Explore Services
+                <Link href="/ai-assistance" className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full text-white bg-primary hover:bg-black transition-colors">
+                  Explore Our Intelligence
                 </Link>
                 <Link href="/bookings" className="inline-flex items-center justify-center px-6 py-3 border text-base font-medium rounded-full text-primary bg-background hover:bg-black border-primary transition-colors">
                   Book Appointment
