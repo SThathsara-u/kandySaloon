@@ -73,7 +73,7 @@ export function EmployeeAuthProvider({ children }: EmployeeAuthProviderProps) {
         method: 'POST',
       });
       setEmployee(null);
-      router.push('/employee/login');
+      window.location.href = '/employee/login';
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
