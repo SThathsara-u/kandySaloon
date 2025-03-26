@@ -97,7 +97,7 @@ export const Header = () => {
               whileTap={{ scale: 0.95 }}
             >
               <Image 
-                src="/logo.png" 
+                src="/saloon-logo-01.png" 
                 alt="Salon Logo" 
                 width={120} 
                 height={40}

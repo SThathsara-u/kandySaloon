@@ -27,8 +27,10 @@ import {
   Mail, 
   MessageSquare,
   CheckCircle,
-  Sparkles
+  Sparkles,
+  AlertCircle
 } from "lucide-react"
+import { z } from "zod"
 
 interface UserProfile {
   id: string
@@ -51,6 +53,18 @@ interface TimeSlot {
   isBooked: boolean
 }
 
+// Zod validation schema
+const bookingFormSchema = z.object({
+  serviceType: z.string().min(1, "Service type is required"),
+  date: z.date({
+    required_error: "Please select a date",
+    invalid_type_error: "That's not a valid date",
+  }),
+  timeSlot: z.string().min(1, "Please select a time slot"),
+  notes: z.string().min(10, "Please provide at least 10 characters for special requests").max(500, "Notes should not exceed 500 characters"),
+  alternatePhone: z.string().regex(/^\d{10}$/, "Phone number must be 10 digits with no letters or special characters").optional().or(z.literal(''))
+})
+
 const serviceTypes = [
   { id: "haircut", name: "Haircut & Styling" },
   { id: "coloring", name: "Hair Coloring" },
@@ -67,6 +81,10 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [availableTimeSlots, setAvailableTimeSlots] = useState<TimeSlot[]>([])
+  const [validationErrors, setValidationErrors] = useState<{
+    alternatePhone?: string;
+    notes?: string;
+  }>({})
   
   const [bookingData, setBookingData] = useState<BookingFormData>({
     serviceType: "haircut",
@@ -128,6 +146,61 @@ export default function BookingPage() {
     }
   }, [bookingData.date, bookingData.serviceType, toast])
 
+  // Validate form fields on change
+  useEffect(() => {
+    validateField('alternatePhone', bookingData.alternatePhone);
+    validateField('notes', bookingData.notes);
+  }, [bookingData.alternatePhone, bookingData.notes]);
+
+  const validateField = (field: 'alternatePhone' | 'notes', value: string) => {
+    const errors = { ...validationErrors };
+    
+    if (field === 'alternatePhone') {
+      if (value && !/^\d{10}$/.test(value)) {
+        errors.alternatePhone = "Phone number must be 10 digits with no letters or special characters";
+      } else {
+        delete errors.alternatePhone;
+      }
+    }
+    
+    if (field === 'notes') {
+      if (!value || value.length < 10) {
+        errors.notes = "Please provide at least 10 characters for special requests";
+      } else if (value.length > 500) {
+        errors.notes = "Notes should not exceed 500 characters";
+      } else {
+        delete errors.notes;
+      }
+    }
+    
+    setValidationErrors(errors);
+  };
+
+  const validateForm = () => {
+    const errors: {
+      alternatePhone?: string;
+      notes?: string;
+    } = {};
+    
+    // Validate alternate phone
+    if (bookingData.alternatePhone) {
+      const phoneRegex = /^\d{10}$/;
+      if (!phoneRegex.test(bookingData.alternatePhone)) {
+        errors.alternatePhone = "Phone number must be 10 digits with no letters or special characters";
+      }
+    }
+    
+    // Validate notes
+    if (!bookingData.notes || bookingData.notes.length < 10) {
+      errors.notes = "Please provide at least 10 characters for special requests";
+    } else if (bookingData.notes.length > 500) {
+      errors.notes = "Notes should not exceed 500 characters";
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -140,9 +213,21 @@ export default function BookingPage() {
       return
     }
     
-    setSubmitting(true)
-    
+    // Validate form using Zod
     try {
+      const isValid = validateForm();
+      if (!isValid) {
+        return;
+      }
+      
+      // Additional validation with Zod
+      bookingFormSchema.parse({
+        ...bookingData,
+        date: bookingData.date
+      });
+      
+      setSubmitting(true)
+      
       const res = await fetch("/api/bookings", {
         method: "POST",
         headers: {
@@ -182,7 +267,15 @@ export default function BookingPage() {
       
     } catch (error) {
       console.error("Error booking appointment:", error)
-      if (error instanceof Error) {
+      if (error instanceof z.ZodError) {
+        // Handle Zod validation errors
+        const errorMessages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+        toast({
+          title: "Validation Error",
+          description: errorMessages,
+          variant: "destructive",
+        })
+      } else if (error instanceof Error) {
         toast({
           title: "Booking Failed",
           description: error.message,
@@ -315,7 +408,7 @@ export default function BookingPage() {
                       Available Time Slots
                     </Label>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {availableTimeSlots.length > 0 ? (
+                    {availableTimeSlots.length > 0 ? (
                         availableTimeSlots.map((slot) => (
                           <Button
                             key={slot.id}
@@ -358,10 +451,28 @@ export default function BookingPage() {
                   <Label htmlFor="alternate-phone">Alternative Contact Number</Label>
                   <Input
                     id="alternate-phone"
-                    placeholder="Enter alternative phone number"
+                    placeholder="Enter alternative phone number (10 digits)"
                     value={bookingData.alternatePhone}
-                    onChange={(e) => setBookingData({...bookingData, alternatePhone: e.target.value})}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Only allow digits to be entered
+                      if (value === '' || /^\d*$/.test(value)) {
+                        setBookingData({...bookingData, alternatePhone: value});
+                        validateField('alternatePhone', value);
+                      }
+                    }}
+                    className={validationErrors.alternatePhone ? "border-red-500" : ""}
+                    maxLength={10}
                   />
+                  {validationErrors.alternatePhone && (
+                    <p className="text-sm text-red-500 flex items-center mt-1">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {validationErrors.alternatePhone}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Must be 10 digits with no letters or special characters
+                  </p>
                 </div>
                 
                 <div className="space-y-2">
@@ -371,8 +482,28 @@ export default function BookingPage() {
                     placeholder="Any special requests or details we should know about..."
                     rows={4}
                     value={bookingData.notes}
-                    onChange={(e) => setBookingData({...bookingData, notes: e.target.value})}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setBookingData({...bookingData, notes: value});
+                      validateField('notes', value);
+                    }}
+                    className={validationErrors.notes ? "border-red-500" : ""}
+                    required
                   />
+                  {validationErrors.notes && (
+                    <p className="text-sm text-red-500 flex items-center mt-1">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {validationErrors.notes}
+                    </p>
+                  )}
+                  <div className="flex justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      Please provide at least 10 characters describing your requests
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {bookingData.notes.length}/500
+                    </p>
+                  </div>
                 </div>
               </CardContent>
 
@@ -380,7 +511,13 @@ export default function BookingPage() {
                 <Button 
                   type="submit" 
                   className="w-full group" 
-                  disabled={submitting || !bookingData.date || !bookingData.timeSlot}
+                  disabled={
+                    submitting || 
+                    !bookingData.date || 
+                    !bookingData.timeSlot || 
+                    Object.keys(validationErrors).length > 0 ||
+                    bookingData.notes.length < 10
+                  }
                 >
                   {submitting ? (
                     <>Processing...</>

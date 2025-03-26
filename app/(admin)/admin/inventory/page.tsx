@@ -59,6 +59,18 @@ import {
 import { Badge } from '@/components/ui/badge';
 import PdfGenerator from '@/components/pdf/InventoryandSupplierPdfGenerator';
 import { FileDown } from 'lucide-react';
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 // Types
 interface Supplier {
@@ -150,11 +162,110 @@ export default function InventoryPage() {
   // Loading states
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Validation schemas
+  const supplierFormSchema = z.object({
+    name: z.string().min(2, { message: "Name must be at least 2 characters" })
+      .regex(/^[a-zA-Z\s]*$/, { message: "Name cannot contain special characters or numbers" }),
+    email: z.string().email({ message: "Please enter a valid email address" }),
+    contact: z.string().min(10, { message: "Contact number must be at least 10 characters" })
+      .regex(/^[0-9+\-\s]*$/, { message: "Contact can only contain numbers, +, - and spaces" }),
+    city: z.string().min(2, { message: "City must be at least 2 characters" }),
+    age: z.string().refine((val) => {
+      const num = parseInt(val);
+      return !isNaN(num) && num >= 18 && num <= 100;
+    }, { message: "Age must be between 18 and 100" }),
+    category: z.string().min(1, { message: "Please select a category" }),
+  });
+
+  const inventoryFormSchema = z.object({
+    name: z.string().min(2, { message: "Name must be at least 2 characters" })
+      .regex(/^[a-zA-Z\s]*$/, { message: "Name cannot contain special characters or numbers" }),
+    description: z.string().min(10, { message: "Description must be at least 10 characters" }),
+    quantity: z.string().refine((val) => {
+      const num = parseInt(val);
+      return !isNaN(num) && num >= 0;
+    }, { message: "Quantity must be a positive number" }),
+    price: z.string().refine((val) => {
+      const num = parseFloat(val);
+      return !isNaN(num) && num > 0;
+    }, { message: "Price must be greater than 0" }),
+    supplier: z.string().min(1, { message: "Please select a supplier" }),
+  });
+
+  // Form hooks
+  const supplierFormHook = useForm<z.infer<typeof supplierFormSchema>>({
+    resolver: zodResolver(supplierFormSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      contact: "",
+      city: "",
+      age: "",
+      category: "",
+    },
+  });
+
+  const inventoryFormHook = useForm<z.infer<typeof inventoryFormSchema>>({
+    resolver: zodResolver(inventoryFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      quantity: "",
+      price: "",
+      supplier: "",
+    },
+  });
+    
   // Fetch suppliers & inventory on component mount
   useEffect(() => {
     fetchSuppliers();
     fetchInventory();
   }, []);
+
+  // Reset form values when editing supplier
+  useEffect(() => {
+    if (supplierFormMode === 'edit' && editingSupplierId) {
+      supplierFormHook.reset({
+        name: supplierForm.name,
+        email: supplierForm.email,
+        contact: supplierForm.contact,
+        city: supplierForm.city,
+        age: supplierForm.age,
+        category: supplierForm.category,
+      });
+    } else if (supplierFormMode === 'add') {
+      supplierFormHook.reset({
+        name: "",
+        email: "",
+        contact: "",
+        city: "",
+        age: "",
+        category: "",
+      });
+    }
+  }, [supplierFormMode, editingSupplierId, supplierForm]);
+
+  // Reset form values when editing inventory
+  useEffect(() => {
+    if (inventoryFormMode === 'edit' && editingInventoryId) {
+      inventoryFormHook.reset({
+        name: inventoryForm.name,
+        description: inventoryForm.description,
+        quantity: inventoryForm.quantity,
+        price: inventoryForm.price,
+        supplier: inventoryForm.supplier,
+      });
+    } else if (inventoryFormMode === 'add') {
+      inventoryFormHook.reset({
+        name: "",
+        description: "",
+        quantity: "",
+        price: "",
+        supplier: "",
+      });
+    }
+  }, [inventoryFormMode, editingInventoryId, inventoryForm]);
+
   // Handle pdf export
   const handleExport = (type: 'suppliers' | 'inventory') => {
     setPdfType(type);
@@ -215,8 +326,7 @@ export default function InventoryPage() {
   };
   
   // Handle supplier form submit
-  const handleSupplierSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSupplierSubmit = async (values: z.infer<typeof supplierFormSchema>) => {
     setIsSubmitting(true);
     
     try {
@@ -232,8 +342,8 @@ export default function InventoryPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...supplierForm,
-          age: parseInt(supplierForm.age, 10),
+          ...values,
+          age: parseInt(values.age, 10),
         }),
       });
       
@@ -268,8 +378,7 @@ export default function InventoryPage() {
   };
   
   // Handle inventory form submit
-  const handleInventorySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleInventorySubmit = async (values: z.infer<typeof inventoryFormSchema>) => {
     setIsSubmitting(true);
     
     try {
@@ -285,9 +394,9 @@ export default function InventoryPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...inventoryForm,
-          quantity: parseInt(inventoryForm.quantity, 10),
-          price: parseFloat(inventoryForm.price),
+          ...values,
+          quantity: parseInt(values.quantity, 10),
+          price: parseFloat(values.price),
         }),
       });
       
@@ -410,6 +519,7 @@ export default function InventoryPage() {
     setEditingSupplierId(null);
     setSupplierFormMode('add');
     setIsSupplierFormOpen(false);
+    supplierFormHook.reset();
   };
   
   // Reset inventory form
@@ -418,6 +528,7 @@ export default function InventoryPage() {
     setEditingInventoryId(null);
     setInventoryFormMode('add');
     setIsInventoryFormOpen(false);
+    inventoryFormHook.reset();
   };
   
   // Filter suppliers by search query
@@ -712,123 +823,137 @@ export default function InventoryPage() {
                 : 'Update the supplier information.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSupplierSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <label htmlFor="name" className="text-sm font-medium">
-                  Name
-                </label>
-                <Input
-                  id="name"
-                  placeholder="Enter supplier name"
-                  value={supplierForm.name}
-                  onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter supplier email"
-                  value={supplierForm.email}
-                  onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="contact" className="text-sm font-medium">
-                  Contact Number
-                </label>
-                <Input
-                  id="contact"
-                  placeholder="Enter contact number"
-                  value={supplierForm.contact}
-                  onChange={(e) => setSupplierForm({ ...supplierForm, contact: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <label htmlFor="city" className="text-sm font-medium">
-                    City
-                  </label>
-                  <Input
-                    id="city"
-                    placeholder="Enter city"
-                    value={supplierForm.city}
-                    onChange={(e) => setSupplierForm({ ...supplierForm, city: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <label htmlFor="age" className="text-sm font-medium">
-                    Age
-                  </label>
-                  <Input
-                    id="age"
-                    type="number"
-                    placeholder="Enter age"
-                    value={supplierForm.age}
-                    onChange={(e) => setSupplierForm({ ...supplierForm, age: e.target.value })}
-                    min="18"
-                    max="100"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="category" className="text-sm font-medium">
-                  Category
-                </label>
-                <Select
-                  value={supplierForm.category}
-                  onValueChange={(value) => setSupplierForm({ ...supplierForm, category: value })}
-                  required
-                >
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Categories</SelectLabel>
-                      {supplierCategories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={resetSupplierForm}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting} className='text-white'>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin text-white" />
-                    {supplierFormMode === 'add' ? 'Adding...' : 'Updating...'}
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4 text-white" />
-                    {supplierFormMode === 'add' ? 'Add Supplier' : 'Update Supplier'}
-                  </>
+          <Form {...supplierFormHook}>
+            <form onSubmit={supplierFormHook.handleSubmit(handleSupplierSubmit)} className="space-y-4">
+              <FormField
+                control={supplierFormHook.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter supplier name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </Button>
-            </DialogFooter>
-          </form>
+              />
+              
+              <FormField
+                control={supplierFormHook.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Enter supplier email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={supplierFormHook.control}
+                name="contact"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contact Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter contact number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={supplierFormHook.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter city" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={supplierFormHook.control}
+                  name="age"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Age</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="Enter age" {...field} min="18" max="100" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={supplierFormHook.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Categories</SelectLabel>
+                          {supplierCategories.map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={resetSupplierForm}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting} className='text-white'>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin text-white" />
+                      {supplierFormMode === 'add' ? 'Adding...' : 'Updating...'}
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4 text-white" />
+                      {supplierFormMode === 'add' ? 'Add Supplier' : 'Update Supplier'}
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
@@ -845,119 +970,144 @@ export default function InventoryPage() {
                 : 'Update the inventory item information.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleInventorySubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <label htmlFor="name" className="text-sm font-medium">
-                  Item Name
-                </label>
-                <Input
-                  id="name"
-                  placeholder="Enter item name"
-                  value={inventoryForm.name}
-                  onChange={(e) => setInventoryForm({ ...inventoryForm, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="description" className="text-sm font-medium">
-                  Description
-                </label>
-                <Textarea
-                  id="description"
-                  placeholder="Enter item description"
-                  value={inventoryForm.description}
-                  onChange={(e) => setInventoryForm({ ...inventoryForm, description: e.target.value })}
-                  required
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <label htmlFor="quantity" className="text-sm font-medium">
-                    Quantity
-                  </label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    placeholder="Enter quantity"
-                    value={inventoryForm.quantity}
-                    onChange={(e) => setInventoryForm({ ...inventoryForm, quantity: e.target.value })}
-                    min="0"
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <label htmlFor="price" className="text-sm font-medium">
-                    Unit price (LKR)
-                  </label>
-                  <Input
-                    id="price"
-                    type="number"
-                    placeholder="Enter price"
-                    value={inventoryForm.price}
-                    onChange={(e) => setInventoryForm({ ...inventoryForm, price: e.target.value })}
-                    min="0"
-                    step="0.01"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="supplier" className="text-sm font-medium">
-                  Supplier
-                </label>
-                <Select
-                  value={inventoryForm.supplier}
-                  onValueChange={(value) => setInventoryForm({ ...inventoryForm, supplier: value })}
-                  required
-                >
-                  <SelectTrigger id="supplier">
-                    <SelectValue placeholder="Select supplier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Suppliers</SelectLabel>
-                      {suppliers.length === 0 ? (
-                        <SelectItem value="none" disabled>
-                          No suppliers available
-                        </SelectItem>
-                      ) : (
-                        suppliers.map((supplier) => (
-                          <SelectItem key={supplier._id} value={supplier._id}>
-                            {supplier.name} ({supplier.email})
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={resetInventoryForm}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting} className='text-white'>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {inventoryFormMode === 'add' ? 'Adding...' : 'Updating...'}
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    {inventoryFormMode === 'add' ? 'Add Item' : 'Update Item'}
-                  </>
+          <Form {...inventoryFormHook}>
+            <form onSubmit={inventoryFormHook.handleSubmit(handleInventorySubmit)} className="space-y-4">
+              <FormField
+                control={inventoryFormHook.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Item Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter item name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </Button>
-            </DialogFooter>
-          </form>
+              />
+              
+              <FormField
+                control={inventoryFormHook.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Enter item description" 
+                        {...field} 
+                        rows={3}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={inventoryFormHook.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantity</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="Enter quantity" 
+                          {...field} 
+                          min="0"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={inventoryFormHook.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unit price (LKR)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="Enter price" 
+                          {...field} 
+                          min="0" 
+                          step="0.01"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={inventoryFormHook.control}
+                name="supplier"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Supplier</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select supplier" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Suppliers</SelectLabel>
+                          {suppliers.length === 0 ? (
+                            <SelectItem value="none" disabled>
+                              No suppliers available
+                            </SelectItem>
+                          ) : (
+                            suppliers.map((supplier) => (
+                              <SelectItem key={supplier._id} value={supplier._id}>
+                                {supplier.name} ({supplier.email})
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={resetInventoryForm}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting} className='text-white'>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {inventoryFormMode === 'add' ? 'Adding...' : 'Updating...'}
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      {inventoryFormMode === 'add' ? 'Add Item' : 'Update Item'}
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 

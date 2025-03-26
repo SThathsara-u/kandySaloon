@@ -19,9 +19,9 @@ export default function Footer() {
             className="space-y-6"
           >
             <Link href="/" className="block transform hover:scale-105 transition-transform duration-300">
-              <div className="relative w-[140px] h-[56px]">
+              <div className="relative w-[240px] h-[64px]">
                 <Image 
-                  src="/logo.png" 
+                  src="/saloon-logo-01.png" 
                   alt="Glamour Haven Salon" 
                   fill
                   className="object-contain"

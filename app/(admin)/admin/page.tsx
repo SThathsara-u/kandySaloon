@@ -49,30 +49,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { useRouter } from "next/navigation";
 
-// Dashboard analytics data
-const analyticsData = {
-  totalAppointments: 42,
-  totalRevenue: 8754.32,
-  customersToday: 16,
-  pendingInquiries: 8,
-  inventoryItems: 137,
-  employeesActive: 12,
-  revenueGrowth: 12.8,
-  appointmentGrowth: 8.3,
-  customerGrowth: 15.6,
-  stockAlerts: 5
-};
 
 // Dashboard management cards data
 const managementCardsData = [
   {
     id: 1,
-    title: "Users & Inquiries",
+    title: "User Inquiries",
     description: "Manage customers and inquiries",
     icon: Users,
     color: "bg-blue-500",
     lightColor: "bg-blue-100",
-    count: `${analyticsData.customersToday} new today`,
     link: "/admin/messages",
     alert: "",
   },
@@ -83,7 +69,6 @@ const managementCardsData = [
     icon: PackageOpen,
     color: "bg-purple-500",
     lightColor: "bg-purple-100",
-    count: `${analyticsData.inventoryItems} items`,
     link: "/admin/inventory",
     alert: "",
   },
@@ -94,7 +79,6 @@ const managementCardsData = [
     icon: Calendar,
     color: "bg-pink-500",
     lightColor: "bg-pink-100",
-    count: `${analyticsData.totalAppointments} upcoming`,
     link: "/admin/appointments",
     alert: "",
   },
@@ -105,45 +89,8 @@ const managementCardsData = [
     icon: User,
     color: "bg-amber-500",
     lightColor: "bg-amber-100",
-    count: `${analyticsData.employeesActive} active staff`,
     link: "/admin/employees",
     alert: "",
-  },
-];
-
-// Recent activities data
-const recentActivities = [
-  {
-    id: 1,
-    action: "New appointment booked",
-    user: "Emma Thompson",
-    time: "10 minutes ago",
-    avatar: "/avatars/emma.jpg",
-    service: "Hair Coloring + Styling",
-  },
-  {
-    id: 2,
-    action: "New customer inquiry",
-    user: "Michael Rodriguez",
-    time: "45 minutes ago",
-    avatar: "/avatars/michael.jpg",
-    service: "About wedding packages",
-  },
-  {
-    id: 3,
-    action: "Inventory updated",
-    user: "Sarah Chen (Staff)",
-    time: "2 hours ago",
-    avatar: "/avatars/sarah.jpg",
-    service: "Added 24 new items",
-  },
-  {
-    id: 4,
-    action: "Appointment completed",
-    user: "James Wilson",
-    time: "3 hours ago",
-    avatar: "/avatars/james.jpg",
-    service: "Men's Haircut + Beard Trim",
   },
 ];
 
@@ -243,104 +190,6 @@ export default function AdminDashboard() {
             <h1 className="text-2xl font-bold ">Dashboard Overview</h1>
             <p className="mt-1 ">Welcome back! Here's what's happening with your salon today.</p>
           </div>
-          {/* Stats Grid */}
-          <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
-          >
-            <motion.div variants={itemVariants}>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium ">Total Revenue</p>
-                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">${analyticsData.totalRevenue.toLocaleString()}</h3>
-                      <div className="flex items-center mt-1 text-sm">
-                        <span className="text-green-500 flex items-center">
-                          <TrendingUp className="h-3 w-3 mr-1" />
-                          {analyticsData.revenueGrowth}%
-                        </span>
-                        <span className=" ml-1">vs last month</span>
-                      </div>
-                    </div>
-                    <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
-                      <DollarSign className="h-6 w-6 text-green-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-            
-            <motion.div variants={itemVariants}>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium ">Appointments</p>
-                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{analyticsData.totalAppointments}</h3>
-                      <div className="flex items-center mt-1 text-sm">
-                        <span className="text-green-500 flex items-center">
-                          <TrendingUp className="h-3 w-3 mr-1" />
-                          {analyticsData.appointmentGrowth}%
-                        </span>
-                        <span className=" ml-1">vs last week</span>
-                      </div>
-                    </div>
-                    <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Calendar className="h-6 w-6 text-blue-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-            
-            <motion.div variants={itemVariants}>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium ">Customers Today</p>
-                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{analyticsData.customersToday}</h3>
-                      <div className="flex items-center mt-1 text-sm">
-                        <span className="text-green-500 flex items-center">
-                          <TrendingUp className="h-3 w-3 mr-1" />
-                          {analyticsData.customerGrowth}%
-                        </span>
-                        <span className=" ml-1">new customers</span>
-                      </div>
-                    </div>
-                    <div className="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center">
-                      <Users className="h-6 w-6 text-purple-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-            
-            <motion.div variants={itemVariants}>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium ">Active Employees</p>
-                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{analyticsData.employeesActive}</h3>
-                      <div className="flex items-center mt-1 text-sm">
-                        <span className="">
-                          <Clock className="h-3 w-3 mr-1 inline" />
-                          Updated 15 min ago
-                        </span>
-                      </div>
-                    </div>
-                    <div className="h-12 w-12 bg-amber-100 rounded-full flex items-center justify-center">
-                      <User className="h-6 w-6 text-amber-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </motion.div>
           
           {/* Main Management Cards */}
           <div className="mb-8">
@@ -366,7 +215,6 @@ export default function AdminDashboard() {
                         <CardDescription className="mb-4">{card.description}</CardDescription>
                         
                         <div className="mt-auto">
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{card.count}</div>
                           {card.alert && (
                             <div className="mt-2">
                               <Badge variant="destructive" className="text-xs">

@@ -18,6 +18,11 @@ import {
   CalendarClock,
   MessageSquareWarning,
   MailPlus,
+  Users,
+  User,
+  Mail,
+  Phone,
+  Calendar,
 } from 'lucide-react'
 
 import {
@@ -53,6 +58,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import AdminInquiryReport from '@/components/admin/AdminInquiryReport';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 interface Inquiry {
   _id: string;
@@ -76,6 +82,15 @@ interface Stats {
   feedbackCount: number;
 }
 
+interface User {
+  _id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  role: string;
+  createdAt: string;
+}
+
 export default function AdminMessagesPage() {
   const { toast } = useToast()
   const [inquiries, setInquiries] = useState<Inquiry[]>([])
@@ -88,6 +103,12 @@ export default function AdminMessagesPage() {
   const [submitting, setSubmitting] = useState(false)
   const [searchText, setSearchText] = useState('')
   const [filteredInquiries, setFilteredInquiries] = useState<Inquiry[]>([])
+  
+  // Users state
+  const [users, setUsers] = useState<User[]>([])
+  const [usersLoading, setUsersLoading] = useState(true)
+  const [userSearchText, setUserSearchText] = useState('')
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
 
   const fetchInquiries = async () => {
     try {
@@ -131,10 +152,36 @@ export default function AdminMessagesPage() {
       setStatsLoading(false)
     }
   }
+  
+  const fetchUsers = async () => {
+    try {
+      setUsersLoading(true)
+      const response = await fetch('/api/users', {
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch users')
+      }
+
+      const data = await response.json()
+      setUsers(data.users)
+      setFilteredUsers(data.users)
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to load users',
+        variant: 'destructive',
+      })
+    } finally {
+      setUsersLoading(false)
+    }
+  }
 
   useEffect(() => {
     fetchInquiries()
     fetchStats()
+    fetchUsers()
   }, [])
 
   useEffect(() => {
@@ -151,6 +198,21 @@ export default function AdminMessagesPage() {
       setFilteredInquiries(filtered)
     }
   }, [searchText, inquiries])
+  
+  useEffect(() => {
+    if (userSearchText.trim() === '') {
+      setFilteredUsers(users)
+    } else {
+      const filtered = users.filter(
+        user =>
+          user.fullName.toLowerCase().includes(userSearchText.toLowerCase()) ||
+          user.email.toLowerCase().includes(userSearchText.toLowerCase()) ||
+          user.phone.toLowerCase().includes(userSearchText.toLowerCase()) ||
+          user.role.toLowerCase().includes(userSearchText.toLowerCase())
+      )
+      setFilteredUsers(filtered)
+    }
+  }, [userSearchText, users])
 
   const handleViewDetails = (inquiry: Inquiry) => {
     setSelectedInquiry(inquiry)
@@ -220,6 +282,26 @@ export default function AdminMessagesPage() {
       day: 'numeric',
     })
   }
+  
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  }
+  
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'destructive';
+      case 'employee':
+        return 'secondary';
+      default:
+        return 'default';
+    }
+  }
 
   return (
     <div className="container py-10 p-5">
@@ -228,9 +310,9 @@ export default function AdminMessagesPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-3xl font-bold">Customer Messages</h1>
+        <h1 className="text-3xl font-bold">Customer Messages & Users</h1>
         <p className="text-muted-foreground mt-2">
-          Manage and respond to customer inquiries and feedback
+          Manage customer inquiries, feedback, and system users
         </p>
       </motion.div>
 
@@ -256,64 +338,11 @@ export default function AdminMessagesPage() {
           loading={statsLoading}
         />
         <StatsCard
-          title="Feedback"
-          value={stats?.feedbackCount ?? 0}
-          icon={<ThumbsUp className="h-5 w-5" />}
-          loading={statsLoading}
+          title="Users"
+          value={users.length}
+          icon={<Users className="h-5 w-5" />}
+          loading={usersLoading}
         />
-      </div>
-
-      {/* Search and filter */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="relative w-full sm:w-auto">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search messages..."
-            className="pl-9 w-full sm:w-[260px]"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setFilteredInquiries(inquiries)}>
-                All Messages
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilteredInquiries(inquiries.filter(i => i.status === 'pending'))}>
-                Pending Only
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilteredInquiries(inquiries.filter(i => i.status === 'responded'))}>
-                Responded Only
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilteredInquiries(inquiries.filter(i => i.type === 'inquiry'))}>
-                Inquiries Only
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilteredInquiries(inquiries.filter(i => i.type === 'feedback'))}>
-                Feedback Only
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button variant="outline" size="sm" onClick={() => {
-            setLoading(true)
-            setStatsLoading(true)
-            fetchInquiries()
-            fetchStats()
-          }}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <AdminInquiryReport 
-            inquiries={inquiries} 
-            isLoading={loading}
-        />
-        </div>
       </div>
 
       <Tabs defaultValue="all" className="w-full">
@@ -323,9 +352,63 @@ export default function AdminMessagesPage() {
           <TabsTrigger value="responded">Responded</TabsTrigger>
           <TabsTrigger value="inquiries">Inquiries</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
         </TabsList>
 
+        {/* Messages Tabs Content */}
         <TabsContent value="all">
+          {/* Search and filter */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search messages..."
+                className="pl-9 w-full sm:w-[260px]"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setFilteredInquiries(inquiries)}>
+                    All Messages
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilteredInquiries(inquiries.filter(i => i.status === 'pending'))}>
+                    Pending Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilteredInquiries(inquiries.filter(i => i.status === 'responded'))}>
+                  Responded Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilteredInquiries(inquiries.filter(i => i.type === 'inquiry'))}>
+                    Inquiries Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilteredInquiries(inquiries.filter(i => i.type === 'feedback'))}>
+                    Feedback Only
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="outline" size="sm" onClick={() => {
+                setLoading(true)
+                setStatsLoading(true)
+                fetchInquiries()
+                fetchStats()
+              }}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              <AdminInquiryReport 
+                inquiries={inquiries} 
+                isLoading={loading}
+              />
+            </div>
+          </div>
           {renderInquiriesList(filteredInquiries)}
         </TabsContent>
         
@@ -343,6 +426,53 @@ export default function AdminMessagesPage() {
         
         <TabsContent value="feedback">
           {renderInquiriesList(filteredInquiries.filter(i => i.type === 'feedback'))}
+        </TabsContent>
+        
+        {/* Users Tab Content */}
+        <TabsContent value="users">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search users..."
+                className="pl-9 w-full sm:w-[260px]"
+                value={userSearchText}
+                onChange={(e) => setUserSearchText(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filter by Role
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setFilteredUsers(users)}>
+                    All Users
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilteredUsers(users.filter(u => u.role === 'user'))}>
+                    Customers Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilteredUsers(users.filter(u => u.role === 'admin'))}>
+                    Admins Only
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilteredUsers(users.filter(u => u.role === 'employee'))}>
+                    Employees Only
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="outline" size="sm" onClick={() => {
+                setUsersLoading(true)
+                fetchUsers()
+              }}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
+          </div>
+          {renderUsersList()}
         </TabsContent>
       </Tabs>
 
@@ -599,6 +729,90 @@ export default function AdminMessagesPage() {
                   >
                     {inquiry.status === 'pending' ? 'Respond' : 'View Details'}
                   </Button>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
+    )
+  }
+  
+  function renderUsersList() {
+    if (usersLoading) {
+      return (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="overflow-hidden">
+              <div className="p-6">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-5 w-1/4" />
+                    <Skeleton className="h-4 w-1/3" />
+                  </div>
+                  <Skeleton className="h-8 w-20" />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )
+    }
+    
+    if (filteredUsers.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Users className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium mb-2">No users found</h3>
+          <p className="text-muted-foreground max-w-md">
+            There are no users matching your current filters.
+          </p>
+        </div>
+      )
+    }
+    
+    return (
+      <div className="space-y-4">
+        {filteredUsers.map((user) => (
+          <motion.div
+            key={user._id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="overflow-hidden transition-all hover:shadow-md">
+              <div className="p-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      {getInitials(user.fullName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
+                      <h3 className="font-medium truncate">{user.fullName}</h3>
+                      <Badge variant={getRoleBadgeVariant(user.role)} className="sm:ml-2 w-fit">
+                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Mail className="h-3.5 w-3.5" />
+                        <span className="truncate">{user.email}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Phone className="h-3.5 w-3.5" />
+                        <span>{user.phone}</span>
+                      </div>
+                      <div className="flex items-center gap-1 md:col-span-2">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>Joined on {formatDate(user.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </Card>

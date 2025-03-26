@@ -54,7 +54,6 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import EmployeePdfGenerator from "@/components/pdf/EmployeePdfGenerator";
 import dynamic from "next/dynamic";
 
 // Dynamically import the PDF Generator to avoid SSR issues
@@ -65,9 +64,9 @@ const DynamicEmployeePdfGenerator = dynamic(
 
 // Employee form schema
 const employeeFormSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  contact: z.string().min(10, { message: "Contact number must be at least 10 characters" }),
+  name: z.string().min(2, { message: "Name must be at least 2 characters" }).regex(/^[a-zA-Z\s]*$/, { message: "Name cannot contain special characters" }),
+  email: z.string().email({ message: "Please enter a valid email address" }),  
+  contact: z.string().min(10, { message: "Contact number must be at least 10 characters" }).regex(/^[0-9]*$/, { message: "Contact number must contain only numbers" }),
   username: z.string().min(3, { message: "Username must be at least 3 characters" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
   address: z.string().min(5, { message: "Address must be at least 5 characters" }),
@@ -88,25 +87,41 @@ const jobRoles = [
   "Spa Therapist"
 ];
 
+interface Employee {
+  _id: string;
+  name: string;
+  email: string;
+  contact: string;
+  username: string;
+  address: string;
+  jobRole: string;
+}
+
+interface LeaveRequest {
+  _id: string;
+  employeeId: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  date: string;
+  month: string;
+  year: string;
+  reason: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export default function EmployeesManagement() {
-  const [employees, setEmployees] = useState([]);
-  const [leaveRequests, setLeaveRequests] = useState([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-  
-  interface Employee {
-    _id: string;
-    name: string;
-    email: string;
-    contact: string;
-    username: string;
-    address: string;
-    jobRole: string;
-  }
-  
+  const [loading, setLoading] = useState(true);
   const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
 
   // Add employee form
@@ -123,7 +138,49 @@ export default function EmployeesManagement() {
     },
   });
 
-  // Fetch employees and leave requests
+  // Fetch employees
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/employee');
+        const data = await response.json();
+        
+        if (data.employees) {
+          setEmployees(data.employees);
+        } else {
+          setEmployees([]);
+        }
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+        setEmployees([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    fetchEmployees();
+  }, []);
+  
+  // Fetch leave requests
+  useEffect(() => {
+    const fetchLeaveRequests = async () => {
+      try {
+        const response = await fetch("/api/admin/leave-requests");
+        if (response.ok) {
+          const data = await response.json();
+          setLeaveRequests(data.leaveRequests || []);
+        }
+      } catch (error) {
+        console.error("Error fetching leave requests:", error);
+        setLeaveRequests([]);
+      }
+    };
+
+    fetchLeaveRequests();
+  }, []);
+
+  // Fetch employees function for refreshing data
   async function fetchEmployees() {
     try {
       setIsLoading(true);
@@ -156,18 +213,13 @@ export default function EmployeesManagement() {
     }
   }
   
-  // Add this inside your EmployeesManagement component
-  useEffect(() => {
-    fetchEmployees();
-    fetchLeaveRequests();
-  }, []);
-  
+  // Fetch leave requests function for refreshing data
   async function fetchLeaveRequests() {
     try {
       const response = await fetch("/api/admin/leave-requests");
       if (response.ok) {
         const data = await response.json();
-        setLeaveRequests(data.leaveRequests);
+        setLeaveRequests(data.leaveRequests || []);
       }
     } catch (error) {
       console.error("Error fetching leave requests:", error);
@@ -175,10 +227,10 @@ export default function EmployeesManagement() {
   }
 
   // Filter employees based on search query
-  const filteredEmployees = employees.filter((employee: any) =>
-    employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    employee.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    employee.jobRole.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredEmployees = employees.filter((employee) =>
+    employee?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    employee?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    employee?.jobRole?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Handle employee addition
@@ -194,18 +246,25 @@ export default function EmployeesManagement() {
         body: JSON.stringify(values),
       });
       
-      // ... processing response
-      
-      toast({
-        title: "Success",
-        description: "Employee created successfully",
-      });
-      
-      setIsAddDialogOpen(false);
-      form.reset();
-      fetchEmployees(); // Refreshes the employee list
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Employee created successfully",
+        });
+        
+        setIsAddDialogOpen(false);
+        form.reset();
+        fetchEmployees(); // Refreshes the employee list
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create employee");
+      }
     } catch (error: any) {
-      // Error handling
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create employee",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -221,27 +280,39 @@ export default function EmployeesManagement() {
         method: "DELETE",
       });
 
-      // ... processing response
-
-      toast({
-        title: "Success",
-        description: "Employee deleted successfully",
-      });
-      
-      setIsDeleteDialogOpen(false);
-      fetchEmployees(); // Refreshes the employee list
-      fetchLeaveRequests();
+      // Don't try to parse the response, just check status
+      if (response.status >= 200 && response.status < 300) {
+        toast({
+          title: "Success",
+          description: "Employee deleted successfully",
+        });
+        
+        setIsDeleteDialogOpen(false);
+        setCurrentEmployee(null); // Clear the current employee after deletion
+        fetchEmployees(); // Refreshes the employee list
+        fetchLeaveRequests();
+      } else {
+        // Handle error without parsing response
+        throw new Error(`Failed to delete employee: ${response.status}`);
+      }
     } catch (error: any) {
-      // Error handling
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete employee",
+        variant: "destructive",
+      });
+      console.error("Error deleting employee:", error);
     } finally {
       setIsLoading(false);
     }
   }
 
   // Open delete confirmation dialog
-  function openDeleteDialog(employee: any) {
-    setCurrentEmployee(employee);
-    setIsDeleteDialogOpen(true);
+  function openDeleteDialog(employee: Employee) {
+    if (employee) {
+      setCurrentEmployee(employee);
+      setIsDeleteDialogOpen(true);
+    }
   }
 
   // Update leave request status
@@ -324,7 +395,7 @@ export default function EmployeesManagement() {
             </div>
           </div>
 
-          {isLoading && employees.length === 0 ? (
+          {loading ? (
             <div className="flex justify-center items-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
             </div>
@@ -342,40 +413,42 @@ export default function EmployeesManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredEmployees.map((employee: any) => (
-                      <TableRow key={employee._id}>
-                        <TableCell>
-                          <div className="flex items-center space-x-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarFallback className="bg-blue-500 text-white">
-                              {employee.name.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{employee.name}</div>
-                            <div className="text-sm text-gray-500">{employee.email}</div>
-                          </div>
-                        </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="bg-blue-50 text-blue-800">
-                            {employee.jobRole}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{employee.contact}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{employee.address}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-red-600 hover:text-red-800"
-                            onClick={() => openDeleteDialog(employee)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                    {filteredEmployees.map((employee) => (
+                      employee && (
+                        <TableRow key={employee._id}>
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-9 w-9">
+                                <AvatarFallback className="bg-blue-500 text-white">
+                                  {employee.name ? employee.name.charAt(0).toUpperCase() : '?'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium">{employee.name}</div>
+                                <div className="text-sm text-gray-500">{employee.email}</div>
+                                </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-blue-50 text-blue-800">
+                              {employee.jobRole}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{employee.contact}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">{employee.address}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:text-red-800"
+                              onClick={() => openDeleteDialog(employee)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
                     ))}
                   </TableBody>
                 </Table>
@@ -431,7 +504,7 @@ export default function EmployeesManagement() {
             </p>
           </div>
 
-          {isLoading && leaveRequests.length === 0 ? (
+          {loading ? (
             <div className="flex justify-center items-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
             </div>
@@ -457,53 +530,55 @@ export default function EmployeesManagement() {
                     </TableHeader>
                     <TableBody>
                       {leaveRequests
-                        .filter((req: any) => req.status === 'pending')
-                        .map((request: any) => (
-                          <TableRow key={request._id}>
-                            <TableCell>
-                              <div className="font-medium">
-                                {request.employeeId.name}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {request.employeeId.email}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {request.date}/{request.month}/{request.year}
-                            </TableCell>
-                            <TableCell className="max-w-[200px] truncate">
-                              {request.reason}
-                            </TableCell>
-                            <TableCell>
-                              {new Date(request.createdAt).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end space-x-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-green-600 hover:text-green-800"
-                                  onClick={() => updateLeaveRequestStatus(request._id, 'accepted')}
-                                  disabled={isLoading}
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                  <span className="sr-only sm:not-sr-only sm:ml-2">Approve</span>
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-red-600 hover:text-red-800"
-                                  onClick={() => updateLeaveRequestStatus(request._id, 'rejected')}
-                                  disabled={isLoading}
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                  <span className="sr-only sm:not-sr-only sm:ml-2">Reject</span>
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
+                        .filter((req) => req.status === 'pending')
+                        .map((request) => (
+                          request.employeeId && (
+                            <TableRow key={request._id}>
+                              <TableCell>
+                                <div className="font-medium">
+                                  {request.employeeId.name}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {request.employeeId.email}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {request.date}/{request.month}/{request.year}
+                              </TableCell>
+                              <TableCell className="max-w-[200px] truncate">
+                                {request.reason}
+                              </TableCell>
+                              <TableCell>
+                                {new Date(request.createdAt).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end space-x-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-green-600 hover:text-green-800"
+                                    onClick={() => updateLeaveRequestStatus(request._id, 'accepted')}
+                                    disabled={isLoading}
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                    <span className="sr-only sm:not-sr-only sm:ml-2">Approve</span>
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-red-600 hover:text-red-800"
+                                    onClick={() => updateLeaveRequestStatus(request._id, 'rejected')}
+                                    disabled={isLoading}
+                                  >
+                                    <XCircle className="h-4 w-4" />
+                                    <span className="sr-only sm:not-sr-only sm:ml-2">Reject</span>
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )
                         ))}
-                      {leaveRequests.filter((req: any) => req.status === 'pending').length === 0 && (
+                      {leaveRequests.filter((req) => req.status === 'pending').length === 0 && (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center py-6 text-gray-500">
                             <AlertCircle className="h-8 w-8 mx-auto text-gray-300 mb-2" />
@@ -536,40 +611,42 @@ export default function EmployeesManagement() {
                     </TableHeader>
                     <TableBody>
                       {leaveRequests
-                        .filter((req: any) => req.status !== 'pending')
-                        .map((request: any) => (
-                          <TableRow key={request._id}>
-                            <TableCell>
-                              <div className="font-medium">
-                                {request.employeeId.name}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {request.employeeId.email}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {request.date}/{request.month}/{request.year}
-                            </TableCell>
-                            <TableCell className="max-w-[200px] truncate">
-                              {request.reason}
-                            </TableCell>
-                            <TableCell>
-                              {request.status === 'accepted' ? (
-                                <Badge variant="outline" className="bg-green-100 text-green-800">
-                                  Approved
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-red-100 text-red-800">
-                                  Rejected
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {new Date(request.updatedAt || request.createdAt).toLocaleDateString()}
-                            </TableCell>
-                          </TableRow>
+                        .filter((req) => req.status !== 'pending')
+                        .map((request) => (
+                          request.employeeId && (
+                            <TableRow key={request._id}>
+                              <TableCell>
+                                <div className="font-medium">
+                                  {request.employeeId.name}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {request.employeeId.email}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {request.date}/{request.month}/{request.year}
+                              </TableCell>
+                              <TableCell className="max-w-[200px] truncate">
+                                {request.reason}
+                              </TableCell>
+                              <TableCell>
+                                {request.status === 'accepted' ? (
+                                  <Badge variant="outline" className="bg-green-100 text-green-800">
+                                    Approved
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-red-100 text-red-800">
+                                    Rejected
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {new Date(request.updatedAt || request.createdAt).toLocaleDateString()}
+                              </TableCell>
+                            </TableRow>
+                          )
                         ))}
-                      {leaveRequests.filter((req: any) => req.status !== 'pending').length === 0 && (
+                      {leaveRequests.filter((req) => req.status !== 'pending').length === 0 && (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center py-6 text-gray-500">
                             <AlertCircle className="h-8 w-8 mx-auto text-gray-300 mb-2" />
@@ -719,8 +796,8 @@ export default function EmployeesManagement() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Creating...
-                    </>
+                      Creating
+                      </>
                   ) : (
                     "Create Employee"
                   )}
@@ -745,7 +822,7 @@ export default function EmployeesManagement() {
               <div className="flex items-center space-x-3">
                 <Avatar className="h-10 w-10">
                   <AvatarFallback className="bg-red-500 text-white">
-                    {currentEmployee.name.charAt(0).toUpperCase()}
+                    {currentEmployee.name ? currentEmployee.name.charAt(0).toUpperCase() : '?'}
                   </AvatarFallback>
                 </Avatar>
                 <div>

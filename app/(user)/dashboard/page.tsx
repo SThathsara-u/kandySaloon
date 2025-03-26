@@ -17,7 +17,9 @@ import {
   Save,
   AlertTriangle,
   ChevronRight,
-  Edit3
+  Edit3,
+  Eye, 
+  EyeOff
 } from "lucide-react"
 import { 
   Card, 
@@ -92,7 +94,7 @@ const DashboardCard = ({ title, description, icon, href }: DashboardCardProps) =
 }
 
 export default function DashboardPage() {
-  const { user, checkAuth, logout } = useAuth()
+  const { user, checkAuth, logout, loading } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
@@ -103,25 +105,26 @@ export default function DashboardPage() {
     email: "",
     phone: "",
   })
-
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  })
+  const [passwordError, setPasswordError] = useState("")
+  const [passwordSuccess, setPasswordSuccess] = useState("")
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  })
   useEffect(() => {
-    if (!user) {
-        router.push("/login")
-        return
-      }
-    
-    // Pre-populate form data when user is loaded
-    if (user) {
-      setFormData({
-        fullName: user.fullName || "",
-        email: user.email || "",
-        phone: "", // Fetch from backend or provide default
-      })
-      
-      // Get user details including fields not in the auth context
-      fetchUserDetails()
+    // Only redirect if we've finished checking auth and there's no user
+    if (!loading && !user) {
+      router.push("/login")
     }
-  }, [user, router])
+    fetchUserDetails()
+  }, [user, loading, router])
 
   const fetchUserDetails = async () => {
     try {
@@ -143,6 +146,76 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error("Error fetching user details:", error)
+    }
+  }
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setPasswordData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+    // Clear previous messages when user starts typing
+    setPasswordError("")
+    setPasswordSuccess("")
+  }
+
+  const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }))
+  }
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsChangingPassword(true)
+    setPasswordError("")
+    setPasswordSuccess("")
+    
+    // Validate passwords
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError("New password must be at least 6 characters")
+      setIsChangingPassword(false)
+      return
+    }
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError("New passwords don't match")
+      setIsChangingPassword(false)
+      return
+    }
+  
+    try {
+      const response = await fetch(`/api/users/${user?.id}/password`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        }),
+      })
+  
+      const data = await response.json()
+  
+      if (response.ok) {
+        setPasswordSuccess("Password updated successfully")
+        // Clear password fields
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        })
+      } else {
+        throw new Error(data.message || "Failed to update password")
+      }
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : "Failed to update password")
+    } finally {
+      setIsChangingPassword(false)
     }
   }
 
@@ -240,13 +313,13 @@ export default function DashboardPage() {
     return names[0][0].toUpperCase()
   }
 
-  if (!user) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
-    )
-  }
+if (loading) {
+  return (
+    <div className="flex h-96 items-center justify-center">
+      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+    </div>
+  )
+}
 
   return (
     <div className="container max-w-7xl mx-auto py-20 px-4 sm:px-6">
@@ -258,13 +331,12 @@ export default function DashboardPage() {
       >
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
           <Avatar className="h-16 w-16 border-4 border-primary/20">
-            <AvatarImage src={`https://avatar.vercel.sh/${user.email}`} />
             <AvatarFallback className="text-xl bg-primary/10 text-primary font-medium">
               {getUserInitials()}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h1 className="text-3xl font-bold">Welcome, {user.fullName}</h1>
+            <h1 className="text-3xl font-bold">Welcome, {user?.fullName}</h1>
             <p className="text-muted-foreground">Manage your account and explore our services</p>
           </div>
         </div>
@@ -370,7 +442,117 @@ export default function DashboardPage() {
                 </form>
               </CardContent>
             </Card>
-
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Change Password</CardTitle>
+                  <CardDescription>
+                    Update your password to keep your account secure
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleUpdatePassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="currentPassword">Current Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="currentPassword"
+                          name="currentPassword"
+                          type={showPasswords.current ? "text" : "password"}
+                          value={passwordData.currentPassword}
+                          onChange={handlePasswordChange}
+                          placeholder="Enter your current password"
+                          required
+                        />
+                        <button 
+                          type="button"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          onClick={() => togglePasswordVisibility('current')}
+                        >
+                          {showPasswords.current ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="newPassword">New Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="newPassword"
+                          name="newPassword"
+                          type={showPasswords.new ? "text" : "password"}
+                          value={passwordData.newPassword}
+                          onChange={handlePasswordChange}
+                          placeholder="Enter your new password"
+                          required
+                        />
+                        <button 
+                          type="button"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          onClick={() => togglePasswordVisibility('new')}
+                        >
+                          {showPasswords.new ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Password must be at least 6 characters</p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type={showPasswords.confirm ? "text" : "password"}
+                          value={passwordData.confirmPassword}
+                          onChange={handlePasswordChange}
+                          placeholder="Confirm your new password"
+                          required
+                        />
+                        <button 
+                          type="button"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          onClick={() => togglePasswordVisibility('confirm')}
+                        >
+                          {showPasswords.confirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {passwordError && (
+                      <Alert variant="destructive" className="mt-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>Error</AlertTitle>
+                        <AlertDescription>{passwordError}</AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    {passwordSuccess && (
+                      <Alert className="mt-2 bg-green-50 text-green-800 border-green-200">
+                        <AlertTitle>Success</AlertTitle>
+                        <AlertDescription>{passwordSuccess}</AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    <Button 
+                      type="submit" 
+                      className="mt-4" 
+                      disabled={isChangingPassword}
+                    >
+                      {isChangingPassword ? (
+                        <>
+                          <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <Save size={16} className="mr-2" />
+                          Update Password
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
             <Card className="border-destructive/50">
               <CardHeader>
                 <CardTitle className="text-destructive">Danger Zone</CardTitle>

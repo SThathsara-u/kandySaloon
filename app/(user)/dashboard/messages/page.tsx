@@ -13,7 +13,12 @@ import {
   MessageSquareWarning,
   CalendarClock,
   MessageSquareDiff,
-  ThumbsUp
+  ThumbsUp,
+  Edit,
+  Trash2,
+  X,
+  Save,
+  Loader2
 } from 'lucide-react'
 
 import {
@@ -40,6 +45,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 interface Inquiry {
   _id: string;
@@ -59,6 +77,12 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true)
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null)
   const [openDialog, setOpenDialog] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editSubject, setEditSubject] = useState('')
+  const [editMessage, setEditMessage] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
+  const [inquiryToDelete, setInquiryToDelete] = useState<string | null>(null)
 
   const fetchInquiries = async () => {
     try {
@@ -91,7 +115,101 @@ export default function MessagesPage() {
 
   const handleViewDetails = (inquiry: Inquiry) => {
     setSelectedInquiry(inquiry)
+    setEditSubject(inquiry.subject)
+    setEditMessage(inquiry.message)
+    setIsEditing(false)
     setOpenDialog(true)
+  }
+
+  const handleEditInquiry = async () => {
+    if (!selectedInquiry || !editSubject.trim() || !editMessage.trim()) return
+    
+    setSubmitting(true)
+    
+    try {
+      const response = await fetch(`/api/inquiries/${selectedInquiry._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subject: editSubject,
+          message: editMessage,
+        }),
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to update inquiry')
+      }
+
+      const data = await response.json()
+      
+      // Update the inquiries list
+      setInquiries(inquiries.map(inquiry => 
+        inquiry._id === selectedInquiry._id ? data.inquiry : inquiry
+      ))
+      
+      // Update the selected inquiry
+      setSelectedInquiry(data.inquiry)
+      setIsEditing(false)
+      
+      toast({
+        title: 'Success',
+        description: 'Inquiry updated successfully',
+        variant: 'default',
+      })
+      
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update inquiry',
+        variant: 'destructive',
+      })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDeleteInquiry = async () => {
+    if (!inquiryToDelete) return
+    
+    try {
+      const response = await fetch(`/api/inquiries/${inquiryToDelete}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to delete inquiry')
+      }
+      
+      // Update the inquiries list
+      setInquiries(inquiries.filter(inquiry => inquiry._id !== inquiryToDelete))
+      
+      // Close dialogs if needed
+      if (selectedInquiry && selectedInquiry._id === inquiryToDelete) {
+        setOpenDialog(false)
+      }
+      
+      toast({
+        title: 'Success',
+        description: 'Inquiry deleted successfully',
+        variant: 'default',
+      })
+      
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete inquiry',
+        variant: 'destructive',
+      })
+    } finally {
+      setOpenDeleteDialog(false)
+      setInquiryToDelete(null)
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -186,15 +304,30 @@ export default function MessagesPage() {
           {selectedInquiry && (
             <>
               <DialogHeader>
-                <DialogTitle>{selectedInquiry.subject}</DialogTitle>
-                <DialogDescription className="flex items-center gap-2 pt-2">
+                {isEditing ? (
+                  <>
+                    <VisuallyHidden>
+                      <DialogTitle>Edit {selectedInquiry.subject}</DialogTitle>
+                    </VisuallyHidden>
+                    <Input
+                      value={editSubject}
+                      onChange={(e) => setEditSubject(e.target.value)}
+                      className="text-xl font-semibold"
+                      placeholder="Subject"
+                      aria-label="Edit subject"
+                    />
+                  </>
+                ) : (
+                  <DialogTitle>{selectedInquiry.subject}</DialogTitle>
+                )}
+                <div className="flex items-center gap-2 pt-2">
                   <Badge variant={selectedInquiry.type === 'inquiry' ? 'default' : 'secondary'}>
                     {selectedInquiry.type === 'inquiry' ? 'Inquiry' : 'Feedback'}
                   </Badge>
                   <span className="text-muted-foreground">
                     Submitted on {formatDate(selectedInquiry.createdAt)}
                   </span>
-                </DialogDescription>
+                </div>
               </DialogHeader>
               <div className="space-y-6 mt-4">
                 <Card>
@@ -202,11 +335,74 @@ export default function MessagesPage() {
                     <CardTitle className="text-sm text-muted-foreground">Your Message</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p>{selectedInquiry.message}</p>
+                    {isEditing ? (
+                      <Textarea
+                        value={editMessage}
+                        onChange={(e) => setEditMessage(e.target.value)}
+                        className="min-h-[120px]"
+                        placeholder="Your message"
+                      />
+                    ) : (
+                      <div>{selectedInquiry.message}</div>
+                    )}
                   </CardContent>
+                  {selectedInquiry.status === 'pending' && (
+                    <CardFooter className="flex justify-end gap-2">
+                      {isEditing ? (
+                        <>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => {
+                              setIsEditing(false)
+                              setEditSubject(selectedInquiry.subject)
+                              setEditMessage(selectedInquiry.message)
+                            }}
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Cancel
+                          </Button>
+                          <Button 
+                            onClick={handleEditInquiry}
+                            disabled={!editSubject.trim() || !editMessage.trim() || submitting}
+                          >
+                            {submitting ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="h-4 w-4 mr-2" />
+                                Save Changes
+                              </>
+                            )}
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => {
+                              setInquiryToDelete(selectedInquiry._id)
+                              setOpenDeleteDialog(true)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </Button>
+                          <Button 
+                            onClick={() => setIsEditing(true)}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </Button>
+                        </>
+                      )}
+                    </CardFooter>
+                  )}
                 </Card>
 
-                {selectedInquiry.status === 'responded' && (
+                {selectedInquiry.status === 'responded' && selectedInquiry.response && (
                   <Card className="bg-muted">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm text-muted-foreground">Response from Kandy Saloon</CardTitle>
@@ -215,7 +411,7 @@ export default function MessagesPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <p>{selectedInquiry.response}</p>
+                      <div>{selectedInquiry.response}</div>
                     </CardContent>
                   </Card>
                 )}
@@ -236,6 +432,26 @@ export default function MessagesPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your inquiry.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteInquiry}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+              </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 
@@ -320,13 +536,41 @@ export default function MessagesPage() {
                     <CalendarClock className="h-3 w-3 mr-1" />
                     {formatDate(inquiry.createdAt)}
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleViewDetails(inquiry)}
-                  >
-                    View Details
-                  </Button>
+                  <div className="flex gap-2">
+                    {inquiry.status === 'pending' && (
+                      <>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setInquiryToDelete(inquiry._id)
+                            setOpenDeleteDialog(true)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            handleViewDetails(inquiry)
+                            setIsEditing(true)
+                          }}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                      </>
+                    )}
+                    <Button 
+                      variant={inquiry.status === 'pending' ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => handleViewDetails(inquiry)}
+                    >
+                      View Details
+                    </Button>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -336,3 +580,4 @@ export default function MessagesPage() {
     )
   }
 }
+

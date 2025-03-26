@@ -235,6 +235,7 @@ export default function LoginPage() {
             className="mt-8 text-sm"
           >
             <p>Don't have an account yet? <Link href="/signup" className="font-bold underline hover:text-pink-200 transition-colors">Sign up here</Link></p>
+            <p className="mt-2">Are you an employee? <Link href="/employee/login" className="font-bold underline hover:text-pink-200 transition-colors">Login to Employee Dashboard</Link></p>
           </motion.div>
         </div>
       </motion.div>
