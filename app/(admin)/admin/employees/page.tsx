@@ -271,41 +271,43 @@ export default function EmployeesManagement() {
   }
   
   // Handle employee deletion
-  async function deleteEmployee() {
-    if (!currentEmployee) return;
-    
-    setIsLoading(true);
-    try {
-      const response = await fetch(`/api/employee/${currentEmployee._id}`, {
-        method: "DELETE",
-      });
+  // Handle employee deletion
+async function deleteEmployee() {
+  if (!currentEmployee) return;
+  
+  setIsLoading(true);
+  try {
+    const response = await fetch(`/api/employee/${currentEmployee._id}`, {
+      method: "DELETE",
+    });
 
-      // Don't try to parse the response, just check status
-      if (response.status >= 200 && response.status < 300) {
-        toast({
-          title: "Success",
-          description: "Employee deleted successfully",
-        });
-        
-        setIsDeleteDialogOpen(false);
-        setCurrentEmployee(null); // Clear the current employee after deletion
-        fetchEmployees(); // Refreshes the employee list
-        fetchLeaveRequests();
-      } else {
-        // Handle error without parsing response
-        throw new Error(`Failed to delete employee: ${response.status}`);
-      }
-    } catch (error: any) {
+    // Don't try to parse the response, just check status
+    if (response.status >= 200 && response.status < 300) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to delete employee",
-        variant: "destructive",
+        title: "Success",
+        description: "Employee deleted successfully",
       });
-      console.error("Error deleting employee:", error);
-    } finally {
-      setIsLoading(false);
+      
+      setIsDeleteDialogOpen(false);
+      setCurrentEmployee(null); // Clear the current employee after deletion
+      fetchEmployees(); // Refreshes the employee list
+      fetchLeaveRequests();
+    } else {
+      // Handle error without parsing response
+      throw new Error(`Failed to delete employee: ${response.status}`);
     }
+  } catch (error: any) {
+    toast({
+      title: "Error",
+      description: error.message || "Failed to delete employee",
+      variant: "destructive",
+    });
+    console.error("Error deleting employee:", error);
+  } finally {
+    setIsLoading(false);
   }
+}
+
 
   // Open delete confirmation dialog
   function openDeleteDialog(employee: Employee) {

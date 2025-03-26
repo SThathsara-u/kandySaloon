@@ -113,6 +113,7 @@ export default function DashboardPage() {
   const [passwordError, setPasswordError] = useState("")
   const [passwordSuccess, setPasswordSuccess] = useState("")
   const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
@@ -267,41 +268,66 @@ export default function DashboardPage() {
   }
 
   const handleDeleteAccount = async () => {
-    setIsDeleting(true)
-
+    if (deleteConfirmation !== 'delete') {
+      toast({
+        title: "Error",
+        description: "Please type 'delete' to confirm account deletion",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsDeleting(true);
+    console.log("Deleting account for user:", user?.id);
+    
     try {
+      // Log the request details
+      console.log("Sending DELETE request to:", `/api/users/${user?.id}`);
+      
       const response = await fetch(`/api/users/${user?.id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
-      })
-
+      });
+      
+      console.log("Response status:", response.status);
+      const responseData = await response.json();
+      console.log("Response data:", responseData);
+  
       if (response.ok) {
         toast({
           title: "Account Deleted",
           description: "Your account has been deleted successfully.",
           variant: "default",
-        })
+        });
+        
+        // Clear the confirmation text
+        setDeleteConfirmation("");
+        
+        // Close the dialog
+        setShowDeleteDialog(false);
         
         // Log the user out and redirect to home page
-        await logout()
-        router.push("/")
+        await logout();
+        router.push("/");
       } else {
-        const data = await response.json()
-        throw new Error(data.message || "Failed to delete account")
+        throw new Error(responseData.message || "Failed to delete account");
       }
     } catch (error) {
+      console.error("Error deleting account:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to delete account",
         variant: "destructive",
-      })
-      setIsDeleting(false)
-      setShowDeleteDialog(false)
+      });
+    } finally {
+      setIsDeleting(false);
     }
-  }
+  };
+  
+  
 
   // Generate user initials for avatar
   const getUserInitials = () => {
@@ -570,52 +596,51 @@ if (loading) {
                 </Alert>
               </CardContent>
               <CardFooter>
-                <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                  <DialogTrigger asChild>
-                    <Button variant="destructive">
-                      <Trash2 size={16} className="mr-2" />
-                      Delete Account
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Are you absolutely sure?</DialogTitle>
-                      <DialogDescription>
-                        This action cannot be undone. This will permanently delete your
-                        account and remove all your data from our servers.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                      <p className="text-sm font-medium">Type <strong>delete</strong> to confirm:</p>
-                      <Input 
-                        className="mt-2"
-                        placeholder="delete"
-                        onChange={(e) => {
-                          const confirmButton = document.getElementById('confirm-delete-button') as HTMLButtonElement;
-                          confirmButton.disabled = e.target.value !== 'delete';
-                        }}
-                      />
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-                        Cancel
-                      </Button>
-                      <Button 
-                        id="confirm-delete-button"
-                        variant="destructive" 
-                        disabled={true}
-                        onClick={handleDeleteAccount}
-                      >
-                        {isDeleting ? (
-                          <>
-                            <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                            Deleting...
-                          </>
-                        ) : "Delete Account"}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+
+<Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+  <DialogTrigger asChild>
+    <Button variant="destructive">
+      <Trash2 size={16} className="mr-2" />
+      Delete Account
+    </Button>
+  </DialogTrigger>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Are you absolutely sure?</DialogTitle>
+      <DialogDescription>
+        This action cannot be undone. This will permanently delete your
+        account and remove all your data from our servers.
+      </DialogDescription>
+    </DialogHeader>
+    <div className="py-4">
+      <p className="text-sm font-medium">Type <strong>delete</strong> to confirm:</p>
+      <Input 
+        className="mt-2"
+        placeholder="delete"
+        value={deleteConfirmation}
+        onChange={(e) => setDeleteConfirmation(e.target.value)}
+      />
+    </div>
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+        Cancel
+      </Button>
+      <Button 
+        variant="destructive" 
+        disabled={deleteConfirmation !== 'delete' || isDeleting}
+        onClick={handleDeleteAccount}
+      >
+        {isDeleting ? (
+          <>
+            <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            Deleting...
+          </>
+        ) : "Delete Account"}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
               </CardFooter>
             </Card>
           </TabsContent>
