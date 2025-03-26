@@ -186,47 +186,72 @@ export default function AppointmentsPage() {
     setPagination(prev => ({ ...prev, page: newPage }))
   }
 
-  const handleStatusChange = (bookingId: string, newStatus: 'pending' | 'confirmed' | 'completed' | 'cancelled') => {
-    const updateBookingStatus = async () => {
-      try {
-        const res = await fetch(`/api/admin/bookings/${bookingId}`, {
-          method: 'PUT',
+  
+const handleStatusChange = (bookingId: string, newStatus: 'pending' | 'confirmed' | 'completed' | 'cancelled') => {
+  const updateBookingStatus = async () => {
+    try {
+      const res = await fetch(`/api/admin/bookings/${bookingId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      
+      if (!res.ok) {
+        throw new Error("Failed to update booking status")
+      }
+      
+      // Find the booking that was updated
+      const updatedBooking = bookings.find(booking => booking._id === bookingId);
+      
+      // Update the booking in state
+      setBookings(prev => 
+        prev.map(booking => 
+          booking._id === bookingId 
+            ? { ...booking, status: newStatus } 
+            : booking
+        )
+      )
+      
+      // If status is changed to confirmed, send confirmation email via API
+      if (newStatus === 'confirmed' && updatedBooking) {
+        // Send confirmation email via API endpoint
+        const emailRes = await fetch('/api/email', {
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ status: newStatus }),
-        })
+          body: JSON.stringify({
+            email: updatedBooking.email,
+            name: updatedBooking.name,
+            service: updatedBooking.service,
+            date: updatedBooking.date,
+            time: updatedBooking.time
+          }),
+        });
         
-        if (!res.ok) {
-          throw new Error("Failed to update booking status")
-        }
-        
-        
-        // Update the booking in state
-        setBookings(prev => 
-            prev.map(booking => 
-              booking._id === bookingId 
-                ? { ...booking, status: newStatus } 
-                : booking
-            )
-          )
-          
-          toast({
-            title: "Status Updated",
-            description: `Booking status changed to ${newStatus}`,
-          })
-        } catch (error) {
-          console.error("Error updating booking status:", error)
-          toast({
-            title: "Update Failed",
-            description: "Failed to update booking status. Please try again.",
-            variant: "destructive",
-          })
+        if (!emailRes.ok) {
+          console.error('Failed to send confirmation email');
         }
       }
       
-      updateBookingStatus()
+      toast({
+        title: "Status Updated",
+        description: `Booking status changed to ${newStatus}${newStatus === 'confirmed' ? ' and confirmation email sent' : ''}`,
+      })
+    } catch (error) {
+      console.error("Error updating booking status:", error)
+      toast({
+        title: "Update Failed",
+        description: "Failed to update booking status. Please try again.",
+        variant: "destructive",
+      })
     }
+  }
+  
+  updateBookingStatus()
+}
   
     const handleDeleteBooking = async (bookingId: string) => {
       setDeletingId(bookingId)

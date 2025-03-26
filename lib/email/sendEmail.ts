@@ -102,3 +102,38 @@ export const sendResponseNotification = async (to: string, name: string, subject
     `
   });
 };
+
+// Add this new function to the existing file
+export const sendBookingConfirmationEmail = async (
+  to: string, 
+  name: string, 
+  service: string, 
+  date: string, 
+  time: string
+) => {
+  return sendEmail({
+    to,
+    subject: 'Your Appointment Has Been Confirmed - Kandy Saloon',
+    text: `Dear ${name},\n\nYour appointment for ${service} on ${date} at ${time} has been confirmed. Please be there on time.\n\nBest regards,\nKandy Saloon Team`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 5px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h1 style="color: #9333ea;">Kandy Saloon</h1>
+        </div>
+        <p>Dear <strong>${name}</strong>,</p>
+        <p>We're pleased to inform you that your appointment has been <strong>confirmed</strong>.</p>
+        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 5px 0;"><strong>Service:</strong> ${service}</p>
+          <p style="margin: 5px 0;"><strong>Date:</strong> ${date}</p>
+          <p style="margin: 5px 0;"><strong>Time:</strong> ${time}</p>
+        </div>
+        <p>Please arrive a few minutes before your scheduled time. If you need to reschedule or cancel, please contact us at least 24 hours in advance.</p>
+        <div style="margin: 30px 0; text-align: center;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/appointments" style="background-color: #9333ea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Appointment</a>
+        </div>
+        <p>We look forward to seeing you!</p>
+        <p>Best regards,<br>Kandy Saloon Team</p>
+      </div>
+    `
+  });
+};
