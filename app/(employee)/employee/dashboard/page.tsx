@@ -56,11 +56,11 @@ export default function EmployeeDashboard() {
     }
   }, [employee, loading, router]);  
 
-  // Fetch leave requests
+  // Fetch leave requests 
   useEffect(() => {
-    if (employee) {
+    if (employee) { 
       fetchLeaveRequests();
-    }
+    } 
   }, [employee]);
 
   async function fetchLeaveRequests() {
@@ -77,14 +77,14 @@ export default function EmployeeDashboard() {
 
     // Get available months for leave request
     const getAvailableMonths = () => {
-        const months = [
-          "January", "February", "March", "April", "May", "June",
-          "July", "August", "September", "October", "November", "December"
-        ];
-        
-        const currentDate = new Date();
-        const currentMonth = currentDate.getMonth();
-        const currentYear = currentDate.getFullYear();
+      const months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
         
         // Get next month and future months
         const availableMonths = [];
@@ -126,13 +126,13 @@ export default function EmployeeDashboard() {
       // Profile update form
       const profileForm = useForm<z.infer<typeof profileFormSchema>>({
         resolver: zodResolver(profileFormSchema),
-        defaultValues: {
+        defaultValues: { 
           contact: employee?.contact || "",
           address: employee?.address || "",
           password: "",
           confirmPassword: "",
         },
-      });
+      });  
     
       // Update profile form when employee data changes
       useEffect(() => {
