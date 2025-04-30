@@ -265,7 +265,7 @@ export default function InventoryPage() {
     }
   }, [inventoryFormMode, editingInventoryId, inventoryForm]);
 
-  // Handle pdf export
+  // Handle pdf export  
   const handleExport = (type: 'suppliers' | 'inventory') => {
     setPdfType(type);
     setIsPdfDialogOpen(true);
