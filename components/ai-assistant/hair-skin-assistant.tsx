@@ -103,7 +103,7 @@ export default function HairSkinAssistant() {
                 animate={{ opacity: 1 }}
                 className="flex justify-start"
               >
-                <div className="flex gap-3 max-w-[80%]">
+                <div className="flex gap-3 max-w-[80%]">   
                   <Avatar className="h-8 w-8">
                     <AvatarImage src="/salon-logo.png" alt="AI" />
                     <AvatarFallback>AI</AvatarFallback>
