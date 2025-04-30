@@ -216,7 +216,6 @@ export default function InventoryPage() {
     },
   });
     
-  // Fetch suppliers & inventory on component mount
   useEffect(() => {
     fetchSuppliers();
     fetchInventory();
