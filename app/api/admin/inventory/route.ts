@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Validate supplier exists
+    //Validate supplier exists
     const supplierExists = await Supplier.findById(data.supplier);
     if (!supplierExists) {
       return NextResponse.json({ success: false, error: 'Supplier not found' }, { status: 400 });
