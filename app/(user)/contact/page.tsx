@@ -127,7 +127,7 @@ export default function Contact() {
         </div>
       </section>
 
-      {/* Contact Information */}
+      {/* Create Contact Information */}
       <section className="py-5 bg-background px-4 max-w-7xl mx-auto">
         <div className="grid md:grid-cols-3 gap-8">
           <motion.div 
@@ -141,6 +141,7 @@ export default function Contact() {
             <p className="">+1 (555) 123-4567</p>
             <p className="">+1 (555) 987-6543</p>
           </motion.div>
+     
 
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
