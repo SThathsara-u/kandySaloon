@@ -1,2 +1,2 @@
 # kandySaloon
-ITPM 
+Our  salon management system is designed to automate and simplify day-to-day salon operations. It includes features for booking services, where customers can schedule appointments with ease, and an AI chatbot that responds to customer concerns instantly. The system also offers employee management and leave management to handle staff records and leave requests efficiently. Additionally, inventory management helps track product usage and stock levels, while supplier management ensures timely ordering and delivery of salon supplies.
