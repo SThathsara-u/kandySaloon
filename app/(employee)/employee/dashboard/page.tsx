@@ -22,7 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
-// Leave request form schema
+// Leave request form schema  
 const leaveFormSchema = z.object({
   date: z.string().min(1, { message: "Please select a date" }),
   month: z.string().min(1, { message: "Please select a month" }),
@@ -30,7 +30,7 @@ const leaveFormSchema = z.object({
   reason: z.string().min(5, { message: "Please provide a reason for your leave" }),
 });
 
-// Profile update form schema
+// Profile update form schema  
 const profileFormSchema = z.object({
   contact: z.string().min(1, { message: "Contact number is required" }),
   address: z.string().min(1, { message: "Address is required" }),
@@ -39,7 +39,7 @@ const profileFormSchema = z.object({
 }).refine(data => !data.password || data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
-});
+});  
 
 export default function EmployeeDashboard() {
   const { employee, logout, loading } = useEmployeeAuth();
@@ -49,12 +49,12 @@ export default function EmployeeDashboard() {
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect if not authenticated
-  useEffect(() => {
+  // Redirect if not authenticated  
+  useEffect(() => { 
     if (!loading && !employee) {
       router.push("/employee/login");
     }
-  }, [employee, loading, router]);
+  }, [employee, loading, router]);  
 
   // Fetch leave requests
   useEffect(() => {
