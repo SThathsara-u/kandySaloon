@@ -240,7 +240,7 @@ export async function DELETE(
       )
     }
     
-    // Clear the authentication cookie
+    // put Clear the authentication cookie
     const cookieStore = await cookies()
     cookieStore.delete("auth_token")
     
