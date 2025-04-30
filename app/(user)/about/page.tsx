@@ -106,7 +106,7 @@
           </div>
         </section>
 
-        {/* Contact Section */}
+        {/* Create Contact Section */}
         <section className="py-20 px-4 md:px-8 bg-background">
           <div className="max-w-7xl mx-auto">
             <div className="grid md:grid-cols-2 gap-12">
