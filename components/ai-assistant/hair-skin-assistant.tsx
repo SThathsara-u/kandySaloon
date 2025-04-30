@@ -12,6 +12,7 @@ import { Loader2, SendIcon, User } from "lucide-react"
 type Message = {
   role: "user" | "assistant"
   content: string
+  
 }
 
 export default function HairSkinAssistant() {
