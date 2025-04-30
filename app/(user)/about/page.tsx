@@ -1,5 +1,5 @@
   'use client';
-
+// create page
   import { motion } from 'framer-motion';
 
   export default function About() {
@@ -105,7 +105,7 @@
             </div>
           </div>
         </section>
-
+        
         {/* Contact Section */}
         <section className="py-20 px-4 md:px-8 bg-background">
           <div className="max-w-7xl mx-auto">
