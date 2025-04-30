@@ -68,7 +68,7 @@ export default function HairSkinAssistant() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[400px] pr-4">
+        <ScrollArea className="h-[400px] pr-4">   
           <div className="flex flex-col gap-4">
             {messages.map((message, index) => (
               <motion.div
