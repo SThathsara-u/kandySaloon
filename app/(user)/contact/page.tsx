@@ -1,5 +1,5 @@
 'use client'
-
+//create contact page
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { FaPhone, FaMapMarkerAlt, FaEnvelope, FaClock, FaFacebookF, FaInstagram } from 'react-icons/fa'
