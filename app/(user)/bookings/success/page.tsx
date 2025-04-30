@@ -84,7 +84,7 @@ export default function BookingSuccessPage() {
   
 
   // Function to add booking to calendar   
-  
+
   const addToCalendar = () => {
     if (!booking) return
     
@@ -94,7 +94,7 @@ export default function BookingSuccessPage() {
     const startTime = new Date(`${booking.date}T${booking.time.split(' ')[0]}`)
     const endTime = new Date(startTime.getTime() + 60 * 60 * 1000) // 1 hour later
     
-    // Format for Google Calendar URL
+    // Format for Google Calendar URL  
     const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(eventTitle)}&details=${encodeURIComponent(eventDetails)}&location=${encodeURIComponent(eventLocation)}&dates=${startTime.toISOString().replace(/-|:|\.\d+/g, "")}/${endTime.toISOString().replace(/-|:|\.\d+/g, "")}`
     
     window.open(googleCalendarUrl, '_blank')
