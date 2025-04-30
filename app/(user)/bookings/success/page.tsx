@@ -131,8 +131,9 @@ export default function BookingSuccessPage() {
   // Format the date for display
   const formattedDate = format(new Date(booking.date), "EEEE, MMMM d, yyyy")
   
-  // Get service name
-  const getServiceName = (serviceId: string) => {
+  // Create Get service name
+   // Create Get service name
+   const getServiceName = (serviceId: string) => {
     const services = {
       "haircut": "Haircut & Styling",
       "coloring": "Hair Coloring",
