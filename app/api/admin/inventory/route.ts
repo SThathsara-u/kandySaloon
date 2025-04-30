@@ -4,8 +4,8 @@ import Inventory from '@/lib/mongodb/models/Inventory';
 import Supplier from '@/lib/mongodb/models/Supplier';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-
-const connectDB = async () => {
+//add inventory
+  const connectDB = async () => {
   try {
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(process.env.MONGODB_URI || '');
@@ -98,4 +98,4 @@ export async function POST(request: NextRequest) {
     console.error('Error creating inventory item:', error);
     return NextResponse.json({ success: false, error: 'Failed to create inventory item' }, { status: 500 });
   }
-}
+
