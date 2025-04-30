@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
-
+//create contactDB
 const connectDB = async () => {
   try {
     if (mongoose.connection.readyState === 0) {
