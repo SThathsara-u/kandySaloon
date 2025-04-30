@@ -126,13 +126,13 @@ export default function EmployeeDashboard() {
       // Profile update form
       const profileForm = useForm<z.infer<typeof profileFormSchema>>({
         resolver: zodResolver(profileFormSchema),
-        defaultValues: {
+        defaultValues: { 
           contact: employee?.contact || "",
           address: employee?.address || "",
           password: "",
           confirmPassword: "",
         },
-      });
+      });  
     
       // Update profile form when employee data changes
       useEffect(() => {
