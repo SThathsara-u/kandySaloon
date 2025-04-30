@@ -67,7 +67,7 @@ export default function HairSkinAssistant() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[400px] pr-4">
+        <ScrollArea className="h-[400px] pr-4">   
           <div className="flex flex-col gap-4">
             {messages.map((message, index) => (
               <motion.div
@@ -102,7 +102,7 @@ export default function HairSkinAssistant() {
                 animate={{ opacity: 1 }}
                 className="flex justify-start"
               >
-                <div className="flex gap-3 max-w-[80%]">
+                <div className="flex gap-3 max-w-[80%]">   
                   <Avatar className="h-8 w-8">
                     <AvatarImage src="/salon-logo.png" alt="AI" />
                     <AvatarFallback>AI</AvatarFallback>
