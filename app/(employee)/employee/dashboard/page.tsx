@@ -49,12 +49,12 @@ export default function EmployeeDashboard() {
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect if not authenticated
-  useEffect(() => {
+  // Redirect if not authenticated  
+  useEffect(() => { 
     if (!loading && !employee) {
       router.push("/employee/login");
     }
-  }, [employee, loading, router]);
+  }, [employee, loading, router]);  
 
   // Fetch leave requests
   useEffect(() => {
