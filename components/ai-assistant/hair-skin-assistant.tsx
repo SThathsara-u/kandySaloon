@@ -124,7 +124,7 @@ export default function HairSkinAssistant() {
             onChange={(e) => setInput(e.target.value)}
             className="resize-none flex-1"
           />
-          <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+          <Button type="Sumbit" size="icon" disabled={isLoading || !input.trim()}>
             <SendIcon className="h-4 w-4" />
             <span className="sr-only">Send message</span>
           </Button>
