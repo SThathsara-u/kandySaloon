@@ -83,7 +83,8 @@ export default function BookingSuccessPage() {
   }, [bookingId, router, toast])
   
 
-  // Function to add booking to calendar
+  // Function to add booking to calendar   
+  
   const addToCalendar = () => {
     if (!booking) return
     
