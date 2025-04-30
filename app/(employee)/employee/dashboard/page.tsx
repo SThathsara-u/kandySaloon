@@ -56,11 +56,11 @@ export default function EmployeeDashboard() {
     }
   }, [employee, loading, router]);
 
-  // Fetch leave requests
+  // Fetch leave requests 
   useEffect(() => {
-    if (employee) {
+    if (employee) { 
       fetchLeaveRequests();
-    }
+    } 
   }, [employee]);
 
   async function fetchLeaveRequests() {
