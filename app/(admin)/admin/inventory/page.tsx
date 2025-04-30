@@ -324,9 +324,10 @@ export default function InventoryPage() {
     }
   };
   
-  // Handle supplier form submit
+  
   const handleSupplierSubmit = async (values: z.infer<typeof supplierFormSchema>) => {
     setIsSubmitting(true);
+    
     
     try {
       const url = supplierFormMode === 'add' 
