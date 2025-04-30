@@ -30,7 +30,7 @@ const leaveFormSchema = z.object({
   reason: z.string().min(5, { message: "Please provide a reason for your leave" }),
 });
 
-// Profile update form schema
+// Profile update form schema  
 const profileFormSchema = z.object({
   contact: z.string().min(1, { message: "Contact number is required" }),
   address: z.string().min(1, { message: "Address is required" }),
@@ -39,7 +39,7 @@ const profileFormSchema = z.object({
 }).refine(data => !data.password || data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
-});
+});  
 
 export default function EmployeeDashboard() {
   const { employee, logout, loading } = useEmployeeAuth();
