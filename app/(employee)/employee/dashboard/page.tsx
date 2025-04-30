@@ -22,7 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
-// Leave request form schema
+// Leave request form schema  
 const leaveFormSchema = z.object({
   date: z.string().min(1, { message: "Please select a date" }),
   month: z.string().min(1, { message: "Please select a month" }),
