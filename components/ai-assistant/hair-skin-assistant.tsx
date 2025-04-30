@@ -29,8 +29,6 @@ export default function HairSkinAssistant() {
     e.preventDefault()
     
     if (!input.trim() || isLoading) return
-    
-    // Add user message
     const userMessage = { role: "user" as const, content: input }
     setMessages((prev) => [...prev, userMessage])
     setInput("")
