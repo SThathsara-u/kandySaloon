@@ -56,8 +56,7 @@ export default function BookingSuccessPage() {
     if (!bookingId) {
       router.push('/bookings')
       return
-    }
-  
+    }  
     const fetchBookingDetails = async () => {
       try {
         const res = await fetch(`/api/bookings/${bookingId}`)
