@@ -297,7 +297,7 @@ export default function InventoryPage() {
     }
   };
   
-  // Fetch inventory
+  // Fetch inventory  
   const fetchInventory = async () => {
     setLoadingInventory(true);
     try {
