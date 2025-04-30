@@ -17,7 +17,7 @@ const connectDB = async () => {
   }
 }
 
-// Middleware to verify authentication
+// create Middleware to verify authentication
 const verifyAuth = async (request: NextRequest) => {
   const cookieStore = await cookies()
   const token = cookieStore.get("auth_token")?.value
