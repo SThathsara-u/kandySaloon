@@ -3,7 +3,7 @@ import connectToDatabase from "@/lib/mongodb/connect";
 import LeaveRequest from "@/lib/mongodb/models/LeaveRequest";
 import Employee from "@/lib/mongodb/models/Employee";
 
-// Get leave requests
+//Get leave requests
 export async function GET(req: NextRequest) {
   try {
     await connectToDatabase();
